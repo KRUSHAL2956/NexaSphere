@@ -529,9 +529,14 @@ app.post('/api/forms/recruitment', (req, res) => handleForm('recruitment', req, 
 app.post('/api/core-team/apply', (req, res) => handleForm('core_team', req, res));
 
 const port = Number(process.env.PORT || 8787);
-ensureContentFile().then(() => {
-  app.listen(port, () => {
-    // eslint-disable-next-line no-console
-    console.log(`NexaSphere server listening on http://localhost:${port}`);
+if (!process.env.VERCEL) {
+  const boot = HAS_SUPABASE ? Promise.resolve() : ensureContentFile();
+  boot.then(() => {
+    app.listen(port, () => {
+      // eslint-disable-next-line no-console
+      console.log(`NexaSphere server listening on http://localhost:${port}`);
+    });
   });
-});
+}
+
+export default app;

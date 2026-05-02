@@ -210,6 +210,7 @@ function RolesGuideModal({ onClose }) {
 const WHATSAPP_SCREENING = 'https://chat.whatsapp.com/EFbDGo6awGP2L0laESg3lq';
 const WHATSAPP_COMMUNITY = 'https://chat.whatsapp.com/FhpJEaod2g419jFMfqrhGZ';
 const LINKEDIN_PAGE      = 'https://www.linkedin.com/showcase/glbajaj-nexasphere/';
+const RECRUITMENT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzo1g6WNiO-f8kySE4Mqbdlh3VxZx9pRGLcjt7qyzRCNB1TMK0kRwjZbDD2UsaJFQ0q/exec';
 
 const ROLE_OPTIONS = [
   'Technical Lead',
@@ -966,15 +967,15 @@ export default function RecruitmentPage({ onBack }) {
         }
       } catch { /* ignore */ }
 
-      const apiBase = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
-      const url = apiBase ? `${apiBase}/api/forms/recruitment` : '/api/forms/recruitment';
-      const res = await fetch(url, {
+      const res = await fetch(RECRUITMENT_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Submission failed');
+      if (!res.ok || (data && data.ok === false)) {
+        throw new Error(data?.error || 'Submission failed');
+      }
       try {
         const existing = JSON.parse(localStorage.getItem('ns_submitted_emails') || '[]');
         existing.push(emailKey);

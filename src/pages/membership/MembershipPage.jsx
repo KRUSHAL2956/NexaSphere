@@ -30,6 +30,7 @@ const GROUP_OPTIONS    = [
 
 // ── Apps Script URL for Membership sheet ─────────────────────────────────────
 // Replace this with your deployed Web App URL after deploying Code.gs
+const MEMBERSHIP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRQOW3Xjv13vXvft8ezD9sJdvjV3kf-VHm1l_mImHRDUAEqsilK0wb5QBD5GOkixwe/exec';
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -301,15 +302,15 @@ export default function MembershipPage({ onBack }) {
         formType:     'membership',
       };
 
-      const apiBase = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
-      const url = apiBase ? `${apiBase}/api/forms/membership` : '/api/forms/membership';
-      const res = await fetch(url, {
+      const res = await fetch(MEMBERSHIP_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Membership form submission failed');
+      if (!res.ok || (data && data.ok === false)) {
+        throw new Error(data?.error || 'Membership form submission failed');
+      }
 
       // Save to localStorage to prevent re-submit from same device
       try {

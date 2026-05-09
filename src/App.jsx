@@ -86,6 +86,8 @@ export default function App() {
   return (
     <>
       <Chatbot />
+      <Navbar activeTab={activeTab} onTabChange={handleTabChange} onToggleTheme={toggleTheme} theme={theme} />
+
       {!cinDone && <CinematicOpening theme={theme} onDone={() => setCinDone(true)} />}
       
       {cinDone && (
@@ -96,7 +98,6 @@ export default function App() {
           <AmbientOrbs theme={theme} />
           <GeometricGridBackground theme={theme} />
           <ParticleBackground theme={theme} />
-          <Navbar activeTab={activeTab} onTabChange={handleTabChange} onToggleTheme={toggleTheme} theme={theme} />
         </>
       )}
 

@@ -57,7 +57,6 @@ export default defineConfig({
   ],
   base: "/",
   server: {
-    port: 5175,
     proxy: {
       '/api': 'http://localhost:8787',
       '/healthz': 'http://localhost:8787',

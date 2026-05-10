@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { DynamicIcon } from '../../shared/Icons';
-import { API_BASE } from '../../data/config';
 
 function Counter({ value, suffix = '' }) {
   const [count, setCount] = useState(0);
@@ -233,19 +231,7 @@ function UpcomingCard({ event, color }) {
   );
 }
 
-const ACTIVITY_KEY_MAP = {
-  'Hackathon':       'hackathon',
-  'Codathon':        'codathon',
-  'Ideathon':        'ideathon',
-  'Promptathon':     'promptathon',
-  'Workshop':        'workshop',
-  'Insight Session': 'insight-session',
-  'Open Source Day': 'open-source-day',
-  'Tech Debate':     'tech-debate',
-};
-
 function hexToRgb(hex) {
-  if (!hex || !hex.startsWith('#')) return '0,212,255';
   const r = parseInt(hex.slice(1,3),16);
   const g = parseInt(hex.slice(3,5),16);
   const b = parseInt(hex.slice(5,7),16);
@@ -254,55 +240,95 @@ function hexToRgb(hex) {
 
 export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) {
   const [mounted, setMounted] = useState(false);
-  const [dynamicEvents, setDynamicEvents] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [manualEvents, setManualEvents] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const apiBase = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
+  const activityKey = encodeURIComponent(activity.title);
 
-  const fetchDynamicEvents = async () => {
-    const activityKey = ACTIVITY_KEY_MAP[activity.title];
-    if (!activityKey) return;
-    
-    setLoading(true);
-    try {
-      const url = `${API_BASE}/api/content/activity-events/${activityKey}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setDynamicEvents(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch dynamic events:', err);
-    } finally {
-      setLoading(false);
-    }
+  const fetchManualEvents = async () => {
+    const url = apiBase ? `${apiBase}/api/content/activity-events/${activityKey}` : `/api/content/activity-events/${activityKey}`;
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && Array.isArray(data?.events)) setManualEvents(data.events);
   };
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
     setTimeout(() => setMounted(true), 50);
-    fetchDynamicEvents();
+    fetchManualEvents().catch(() => {});
   }, [activity.title]);
 
+  const askAuth = () => {
+    const name = window.prompt('Enter your full name (core team):');
+    if (!name) return null;
+    const email = window.prompt('Enter your email:');
+    if (!email) return null;
+    const phone = window.prompt('Enter your phone number:');
+    if (!phone) return null;
+    const password = window.prompt('Enter password:');
+    if (!password) return null;
+    return { name, email, phone, password };
+  };
+
+  const handleAddEvent = async () => {
+    const auth = askAuth();
+    if (!auth) return;
+    const eventName = window.prompt('Event name:');
+    if (!eventName) return;
+    const eventDate = window.prompt('Event date (e.g. May 20, 2026):');
+    if (!eventDate) return;
+    const eventTagline = window.prompt('Short tagline (optional):') || '';
+    const eventDescription = window.prompt('Event description:');
+    if (!eventDescription) return;
+    setBusy(true);
+    try {
+      const url = apiBase ? `${apiBase}/api/content/activity-events/${activityKey}` : `/api/content/activity-events/${activityKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...auth, eventName, eventDate, eventTagline, eventDescription }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to add event');
+      alert('Event added successfully.');
+      await fetchManualEvents();
+    } catch (e) {
+      alert(e?.message || 'Unable to add event.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    const auth = askAuth();
+    if (!auth) return;
+    if (!window.confirm('Delete this event?')) return;
+    setBusy(true);
+    try {
+      const url = apiBase ? `${apiBase}/api/content/activity-events/${activityKey}/${eventId}` : `/api/content/activity-events/${activityKey}/${eventId}`;
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(auth),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to delete event');
+      alert('Event deleted.');
+      await fetchManualEvents();
+    } catch (e) {
+      alert(e?.message || 'Unable to delete event.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const color = activity.color || 'var(--cyan)';
-  const rgb = hexToRgb(color);
-
-  // Merge static and dynamic events
-  // Dynamic events from API take precedence if they overlap by ID
-  const allEvents = [...dynamicEvents];
-  const staticConducted = activity.conductedEvents || [];
-  const staticUpcoming = activity.upcomingEvents || [];
-
-  const completedEvents = [
-    ...allEvents.filter(e => e.status === 'completed'),
-    ...staticConducted.filter(se => !allEvents.some(de => de.id === se.id))
-  ];
-
-  const upcomingEvents = [
-    ...allEvents.filter(e => e.status === 'upcoming'),
-    ...staticUpcoming.filter(se => !allEvents.some(de => de.id === se.id))
-  ];
+  const rgb = color.startsWith('#') ? hexToRgb(color) : '0,212,255';
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '100px', overflow: 'hidden' }}>
+
+      
       <div style={{
         position: 'relative',
         background: `linear-gradient(180deg, rgba(${rgb},0.10) 0%, rgba(${rgb},0.03) 60%, transparent 100%)`,
@@ -314,6 +340,7 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
         <ScanLine />
 
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+          
           <button
             onClick={onBack}
             style={{
@@ -329,6 +356,7 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
             ← Back to Activities
           </button>
 
+          
           <div style={{
             opacity: mounted ? 1 : 0,
             transform: mounted ? 'translateY(0)' : 'translateY(30px)',
@@ -375,14 +403,11 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
         </div>
       </div>
 
+      
       <div className="container" style={{ paddingTop: '56px' }}>
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            Loading dynamic events...
-          </div>
-        )}
 
-        {completedEvents.length > 0 && (
+        
+        {((activity.conductedEvents && activity.conductedEvents.length > 0) || manualEvents.length > 0) && (
           <div style={{ marginBottom: '56px' }}>
             <h2 style={{
               fontFamily: 'Orbitron, monospace', fontSize: '1.1rem', fontWeight: 700,
@@ -396,20 +421,27 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
               }} />
               Conducted Events
             </h2>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+              <button className="btn btn-primary btn-sm" onClick={handleAddEvent} disabled={busy}>
+                {busy ? 'Please wait...' : '+ Add Event'}
+              </button>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '760px' }}>
-              {completedEvents.map(event => (
+              {[...manualEvents, ...(activity.conductedEvents || [])].map(event => (
                 <EventCard
                   key={event.id}
-                  event={{...event, date: event.dateText || event.date}}
+                  event={event}
                   activityColor={color}
                   onSelect={onSelectEvent}
+                  onDelete={handleDeleteEvent}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {upcomingEvents.length > 0 && (
+        
+        {activity.upcomingEvents && activity.upcomingEvents.length > 0 && (
           <div style={{ maxWidth: '760px' }}>
             <h2 style={{
               fontFamily: 'Orbitron, monospace', fontSize: '1.1rem', fontWeight: 700,
@@ -424,14 +456,17 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
               Coming Up
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {upcomingEvents.map((event, i) => (
-                <UpcomingCard key={event.id || i} event={{...event, date: event.dateText || event.date}} color={color} />
+              {activity.upcomingEvents.map((event, i) => (
+                <UpcomingCard key={i} event={event} color={color} />
               ))}
             </div>
           </div>
         )}
 
-        {!loading && completedEvents.length === 0 && upcomingEvents.length === 0 && (
+        
+        {(!activity.conductedEvents || activity.conductedEvents.length === 0) &&
+         (!manualEvents || manualEvents.length === 0) &&
+         (!activity.upcomingEvents || activity.upcomingEvents.length === 0) && (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '80px 0' }}>
             <div style={{ fontSize: '4rem', marginBottom: '16px' }}>{activity.icon}</div>
             <p>Events coming soon. Watch this space!</p>

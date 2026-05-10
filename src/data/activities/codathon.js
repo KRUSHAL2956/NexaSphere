@@ -4,7 +4,7 @@
 
 const codathon = {
   id: 'codathon',
-  icon: 'Code2',
+  icon: '💻',
   title: 'Codathon',
   tagline: 'Code. Compete. Conquer.',
   color: '#6366f1',

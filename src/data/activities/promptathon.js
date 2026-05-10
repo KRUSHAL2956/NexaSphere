@@ -4,7 +4,7 @@
 
 const promptathon = {
   id: 'promptathon',
-  icon: 'Bot',
+  icon: '🤖',
   title: 'Promptathon',
   tagline: 'Prompt. Engineer. Dominate.',
   color: '#8b5cf6',
@@ -46,22 +46,22 @@ const promptathon = {
 
   highlights: [
     {
-      icon: 'Brain',
+      icon: '🧠',
       title: 'Prompt Engineering',
       desc: 'Learn to write precise, creative prompts that unlock AI\'s full potential across text, code, and images.',
     },
     {
-      icon: 'Zap',
+      icon: '⚔️',
       title: 'Competitive Rounds',
       desc: 'Multi-round battles where prompts are judged on creativity, accuracy, efficiency, and output quality.',
     },
     {
-      icon: 'Target',
+      icon: '🎯',
       title: 'Real-World Tasks',
       desc: 'Tackle genuine challenges — from content generation to data analysis — using only natural language.',
     },
     {
-      icon: 'Star',
+      icon: '🏆',
       title: 'Leaderboard & Prizes',
       desc: 'Top prompt engineers earn recognition, certificates, and exclusive NexaSphere rewards.',
     },

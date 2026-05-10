@@ -4,7 +4,7 @@
 
 const workshop = {
   id: 'workshop',
-  icon: 'Wrench',
+  icon: '🔧',
   title: 'Workshop',
   tagline: 'Learn. Build. Master.',
   color: '#10b981',

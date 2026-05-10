@@ -4,7 +4,7 @@
 
 const openSourceDay = {
   id: 'open-source-day',
-  icon: 'Globe',
+  icon: '🌐',
   title: 'Open Source Day',
   tagline: 'Contribute. Collaborate. Create.',
   color: '#06b6d4',

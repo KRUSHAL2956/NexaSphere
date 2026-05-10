@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import nexasphereLogo from '../assets/images/logos/nexasphere-logo.png';
 
 const SHARDS = [
@@ -20,7 +20,7 @@ const EXITS = [
   ['0%',   '-160%', '10deg'],
   ['150%', '-125%', '24deg'],
   ['-160%','-25%', '-38deg'],
-  ['0%', ' -5%', '0deg'],
+  ['0%',   '-5%',  '0deg'],   
   ['160%', '-18%', '40deg'],
   ['-148%','140%', '-28deg'],
   ['-65%', '158%', '-14deg'],
@@ -49,8 +49,6 @@ function IntroContent({ phase, count, tagline, accent, accent2, muted, grad, bg,
         background:`radial-gradient(circle,${isL?'rgba(204,17,17,.06)':'rgba(204,17,17,.07)'} 0%,transparent 70%)`,
         animation:'cinGlow 3s ease-in-out infinite',
       }}/>
-      
-      {/* Corner Brackets */}
       {[{t:26,l:26,bt:true,bl:true},{t:26,r:26,bt:true,br:true},{b:26,l:26,bb:true,bl:true},{b:26,r:26,bb:true,br:true}].map((c,i)=>(
         <div key={i} style={{
           position:'absolute',
@@ -61,44 +59,36 @@ function IntroContent({ phase, count, tagline, accent, accent2, muted, grad, bg,
           borderBottom: c.bb?`1.5px solid ${accent}`:'none',
           borderLeft:   c.bl?`1.5px solid ${accent}`:'none',
           borderRight:  c.br?`1.5px solid ${accent}`:'none',
-          opacity: 0.5,
+          opacity: phase>=1 ? .55 : 0,
           transition:'opacity .5s ease',
         }}/>
       ))}
-
-      {/* Logo Container */}
-      <div style={{ 
-        marginBottom:'20px', 
-        animation: 'cinLogoIn .75s cubic-bezier(.34,1.56,.64,1) both' 
-      }}>
+      <div style={{ marginBottom:'20px', opacity:phase>=1?1:0, animation:phase>=1?'cinLogoIn .75s cubic-bezier(.34,1.56,.64,1) both':'none' }}>
         <img src={nexasphereLogo} alt="NexaSphere" style={{
-          width:'110px', height:'110px', objectFit:'contain',
+          width:'96px', height:'96px', objectFit:'contain',
           mixBlendMode: isL ? 'multiply' : 'screen',
           filter: isL
-            ? 'saturate(1.2) contrast(1.1) drop-shadow(0 4px 12px rgba(204,17,17,.3))'
-            : 'brightness(1.2) saturate(1.1) drop-shadow(0 0 15px rgba(204,17,17,.6))',
-          animation: 'float 3s ease-in-out infinite',
+            ? 'saturate(1.5) contrast(1.2) drop-shadow(0 4px 16px rgba(204,17,17,.5)) brightness(1.05)'
+            : 'brightness(1.8) saturate(1.5) drop-shadow(0 0 22px rgba(204,17,17,.8)) drop-shadow(0 0 44px rgba(136,0,0,.5))',
+          animation: phase>=1 ? 'float 3s ease-in-out infinite' : 'none',
         }}/>
       </div>
-
-      {/* Title Text */}
       <div style={{
         display:'flex', gap:'1px', alignItems:'center',
         height:'1.25em', overflow:'visible', marginBottom:'13px',
         perspective:'600px', fontFamily:'Orbitron,monospace',
-        fontSize:'clamp(2rem,6vw,3.8rem)', fontWeight:900, letterSpacing:'.15em',
+        fontSize:'clamp(2rem,6vw,4.2rem)', fontWeight:900, letterSpacing:'.15em',
         whiteSpace:'nowrap',
       }}>
         {WORD.split('').map((ch,li)=>(
           <span key={li} style={{
-            display: (phase >= 2 ? (li < count) : true) ? 'inline-block' : 'none',
+            display: li<count ? 'inline-block' : 'none',
             backgroundImage:grad,
             WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text',
-            animation: phase >= 2 ? 'cinLetterIn .48s cubic-bezier(.22,1,.36,1) both' : 'none',
-            opacity: phase >= 2 ? 1 : 0.1, // Show dim letters initially for "loading" feel
+            animation:'cinLetterIn .48s cubic-bezier(.22,1,.36,1) both',
           }}>{ch}</span>
         ))}
-        {count < WORD.length && phase >= 2 && (
+        {count<WORD.length && phase>=2 && (
           <span style={{
             display:'inline-block', width:'2.5px', height:'.78em',
             background:accent, borderRadius:'1px',
@@ -106,25 +96,19 @@ function IntroContent({ phase, count, tagline, accent, accent2, muted, grad, bg,
           }}/>
         )}
       </div>
-
-      {/* Tagline */}
       <div style={{
-        fontFamily:"'Space Mono',monospace", fontSize:'.68rem',
+        fontFamily:"'Space Mono',monospace", fontSize:'.72rem',
         letterSpacing:'.22em', textTransform:'uppercase', color:muted,
-        opacity: tagline ? 1 : 0, 
-        transform: tagline ? 'none' : 'translateY(10px)',
-        transition: 'all .55s ease', 
-        marginBottom: '4px',
+        opacity:tagline?1:0, transform:tagline?'none':'translateY(10px)',
+        transition:'all .55s ease', marginBottom:'4px',
         textShadow: isL ? 'none' : '0 0 12px rgba(255,255,255,.15)',
       }}>
         GL Bajaj Group of Institutions · Mathura
       </div>
-
-      {/* Progress Bar */}
       <div style={{
-        position:'absolute', bottom:0, left:0, right:0, height:'3px',
+        position:'absolute', bottom:0, left:0, right:0, height:'2px',
         background:`linear-gradient(90deg,${accent},${accent2})`,
-        transformOrigin:'left', animation:'cinProg 2s ease-out forwards',
+        transformOrigin:'left', animation:'cinProg 2.4s ease-out forwards',
       }}/>
     </div>
   );
@@ -139,42 +123,34 @@ export default function CinematicOpening({ onDone, theme = 'dark' }) {
   const [gone,     setGone]     = useState(false);
   const countRef = useRef(0);
   const ivRef    = useRef(null);
+  const timersRef = useRef([]);
   const WORD = 'NEXASPHERE';
   const isL  = theme === 'light';
 
-  const PHASE_1_DELAY = 100;
-  const PHASE_2_DELAY = 300;
-  const TYPEWRITER_INTERVAL = 40;
-  const TAGLINE_DELAY = 700;
-  const CRACKING_DELAY = 1000;
-  const SHATTER_DELAY = 1100;
-  const COMPLETION_DELAY = 1600;
+  const handleSkip = useCallback(() => {
+    timersRef.current.forEach(t => clearTimeout(t));
+    clearInterval(ivRef.current);
+    setGone(true);
+    onDone();
+  }, [onDone]);
 
   useEffect(() => {
-    // Safety auto-skip
-    const safety = setTimeout(() => { if(!gone){ setGone(true); onDone(); } }, 2500);
-
     const ts = [];
-    ts.push(setTimeout(() => setPhase(1), PHASE_1_DELAY));
+    ts.push(setTimeout(() => setPhase(1), 280));
     ts.push(setTimeout(() => {
       setPhase(2);
       ivRef.current = setInterval(() => {
         countRef.current += 1;
         setCount(countRef.current);
         if (countRef.current >= WORD.length) clearInterval(ivRef.current);
-      }, TYPEWRITER_INTERVAL);
-    }, PHASE_2_DELAY));
-    ts.push(setTimeout(() => setTagline(true), TAGLINE_DELAY));
-    ts.push(setTimeout(() => setCracking(true), CRACKING_DELAY));
-    ts.push(setTimeout(() => setShatter(true), SHATTER_DELAY));
-    ts.push(setTimeout(() => {
-      setGone(true);
-      onDone();
-    }, COMPLETION_DELAY));
-    return () => {
-      ts.forEach(t => clearTimeout(t));
-      clearInterval(ivRef.current);
-    };
+      }, 70);
+    }, 650));
+    ts.push(setTimeout(() => setTagline(true),  1680));
+    ts.push(setTimeout(() => setCracking(true), 2500));
+    ts.push(setTimeout(() => setShatter(true),  2640));
+    ts.push(setTimeout(() => { setGone(true); onDone(); }, 3380));
+    timersRef.current = ts;
+    return () => { ts.forEach(t => clearTimeout(t)); clearInterval(ivRef.current); };
   }, []);
 
   const bg      = isL ? '#FFFFFF' : '#0A0A0A';
@@ -201,10 +177,29 @@ export default function CinematicOpening({ onDone, theme = 'dark' }) {
         @keyframes cinProg     { from{transform:scaleX(0)} to{transform:scaleX(1)} }
         @keyframes crackIn     { 0%{opacity:0;stroke-width:0} 40%{opacity:1} 100%{opacity:.7} }
         @keyframes flashBurst  { 0%{opacity:0} 25%{opacity:.9} 100%{opacity:0} }
+        @keyframes cinSkipIn   { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
         ${shardKeyframes}
       `}</style>
 
-      <div style={{ position:'fixed', inset:0, zIndex:9999 }}>
+      {phase >= 1 && (
+        <button
+          onClick={handleSkip}
+          aria-label="Skip intro"
+          style={{
+            position:'fixed', top:'22px', right:'24px', zIndex:10000,
+            background:'rgba(204,17,17,0.12)', border:'1px solid rgba(204,17,17,0.35)',
+            borderRadius:'20px', color: isL ? '#CC1111' : '#FF6666',
+            fontFamily:"'Rajdhani',sans-serif", fontSize:'.78rem', fontWeight:700,
+            letterSpacing:'.12em', textTransform:'uppercase', padding:'6px 16px',
+            cursor:'pointer', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
+            animation:'cinSkipIn .4s ease both', transition:'background .2s, border-color .2s',
+          }}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(204,17,17,0.28)';e.currentTarget.style.borderColor='rgba(204,17,17,0.7)';}}
+          onMouseLeave={e=>{e.currentTarget.style.background='rgba(204,17,17,0.12)';e.currentTarget.style.borderColor='rgba(204,17,17,0.35)';}}
+        >Skip →</button>
+      )}
+
+      <div style={{ position:'fixed', inset:0, zIndex:9999, pointerEvents:'none' }}>
 
         
         {SHARDS.map((s, i) => {
@@ -277,29 +272,6 @@ export default function CinematicOpening({ onDone, theme = 'dark' }) {
             background:'radial-gradient(circle at 50% 50%, rgba(238,80,80,0.55) 0%, transparent 55%)',
             animation:'flashBurst 0.18s ease forwards',
           }}/>
-        )}
-
-        {/* Skip Button Overlay */}
-        {!shatter && (
-          <button 
-            onClick={() => {
-              setGone(true);
-              onDone();
-            }}
-            style={{
-              position:'absolute', bottom:'30px', left:'50%', transform:'translateX(-50%)',
-              zIndex:10000, color:'rgba(255,255,255,0.4)', fontSize:'10px',
-              fontFamily:"'Space Mono',monospace", letterSpacing:'2px',
-              border:'1px solid rgba(255,255,255,0.1)', padding:'6px 14px',
-              borderRadius:'20px', cursor:'pointer', background:'rgba(0,0,0,0.3)',
-              backdropFilter:'blur(5px)', textTransform:'uppercase',
-              transition:'all 0.3s',
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.color='white'; e.currentTarget.style.borderColor='rgba(204,17,17,0.5)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.color='rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)'; }}
-          >
-            Skip Intro
-          </button>
         )}
       </div>
     </>

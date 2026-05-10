@@ -4,7 +4,7 @@
 
 const ideathon = {
   id: 'ideathon',
-  icon: 'Lightbulb',
+  icon: '💡',
   title: 'Ideathon',
   tagline: 'Dream. Design. Disrupt.',
   color: '#f59e0b',

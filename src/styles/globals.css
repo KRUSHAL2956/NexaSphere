@@ -1,14 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap');
 
-html { 
-  scroll-behavior: smooth; 
-  -webkit-text-size-adjust: 100%;
-}
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--c1) var(--bg);
-}
+html  { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body  {
   cursor: none;
   background: var(--bg);

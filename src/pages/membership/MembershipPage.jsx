@@ -187,7 +187,7 @@ function MultiSelectChips({ options, values, onToggle }) {
               fontSize: '.82rem',
             }}
           >
-            {active ? 'âœ“ ' : ''}{opt}
+            {active ? '✓' : ''}{opt}
           </button>
         );
       })}
@@ -339,7 +339,7 @@ export default function MembershipPage({ onBack }) {
     
     {
       title:    'About NexaSphere',
-      subtitle: 'NexaSphere Membership Form â€” GL Bajaj Group of Institutions',
+      subtitle: 'NexaSphere Membership Form — GL Bajaj Group of Institutions',
       icon:     <IconBolt style={{ width: 18, height: 18 }} />,
       render: () => (
         <div style={{ display: 'grid', gap: 18 }}>
@@ -354,7 +354,7 @@ export default function MembershipPage({ onBack }) {
             <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>âš ï¸</span>
             <div style={{ lineHeight: 1.75 }}>
               <div style={{ fontFamily: 'Orbitron,monospace', fontSize: '.75rem', letterSpacing: '.1em', color: 'var(--t1)', marginBottom: 6, textTransform: 'uppercase' }}>
-                Important â€” Read Before Proceeding
+                Important — Read Before Proceeding
               </div>
               <div style={{ fontSize: '.9rem', color: 'var(--t2)' }}>
                 This form can be filled <b style={{ color: 'var(--t1)' }}>only once</b> per device.
@@ -369,7 +369,7 @@ export default function MembershipPage({ onBack }) {
           <p style={{ color: 'var(--t2)', lineHeight: 1.8, fontSize: '.96rem' }}>
             <span className="grad-text" style={{ fontWeight: 700 }}>NexaSphere</span> is the official
             student tech ecosystem at <b style={{ color: 'var(--t1)' }}>GL Bajaj Group of Institutions, Mathura</b>.
-            We bring together students from all branches and years under one platform â€” organising and
+            We bring together students from all branches and years under one platform — organising and
             supporting <b>tech and non-tech events</b> across every domain:
           </p>
 
@@ -386,7 +386,7 @@ export default function MembershipPage({ onBack }) {
               { icon: '☁️', label: 'Cloud & AWS' },
               { icon: '📱', label: 'Android Development' },
               { icon: '📢', label: 'Management & Events' },
-              { icon: 'ðŸ’¼', label: 'Career & Placement' },
+              { icon: '💼', label: 'Career & Placement' },
               { icon: '🎨', label: 'Design & Media' },
             ].map(d => (
               <div key={d.label} style={{
@@ -434,7 +434,7 @@ export default function MembershipPage({ onBack }) {
             padding: '12px 16px',
             display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
           }}>
-            <span style={{ fontSize: '1.1rem' }}>ðŸ”—</span>
+            <span style={{ fontSize: '1.1rem' }}>🔗</span>
             <span style={{ fontSize: '.88rem', color: 'var(--t2)', flex: 1 }}>
               Before filling the form, please follow our official LinkedIn page:
             </span>
@@ -685,7 +685,7 @@ export default function MembershipPage({ onBack }) {
           maxWidth:660, margin:'0 auto',
           lineHeight:1.75, animationDelay:'.12s',
         }}>
-          NexaSphere connects students with opportunities across Tech and Non-Tech domains â€”
+          NexaSphere connects students with opportunities across Tech and Non-Tech domains —
           development, cloud, cybersecurity, management, and career growth.
         </p>
         <div className="member-divider" style={{ marginTop:34, maxWidth:780 }}/>
@@ -727,7 +727,7 @@ export default function MembershipPage({ onBack }) {
                   </div>
                   <div style={{ color:'var(--t2)', fontSize:'.9rem' }}>
                     {done
-                      ? 'Thank you for joining NexaSphere â€” GL Bajaj Group of Institutions ðŸš€'
+                      ? 'Thank you for joining NexaSphere — GL Bajaj Group of Institutions 🚀'
                       : current.subtitle}
                   </div>
                 </div>
@@ -789,14 +789,14 @@ export default function MembershipPage({ onBack }) {
                   padding:22, position:'relative', overflow:'hidden', textAlign:'center',
                 }}>
                   <div className="corner-tl"/><div className="corner-br"/>
-                  <div style={{ fontSize:'2.4rem', marginBottom:14 }}>ðŸš€</div>
+                  <div style={{ fontSize:'2.4rem', marginBottom:14 }}>🚀</div>
                   <div style={{ fontFamily:'Orbitron,monospace', fontSize:'1rem', color:'var(--t1)', fontWeight:700, marginBottom:12 }}>
                     Thank you for filling the NexaSphere Membership Form!
                   </div>
                   <p style={{ color:'var(--t2)', lineHeight:1.8, maxWidth:540, margin:'0 auto' }}>
-                    Your form has been successfully submitted. ðŸŽ‰
+                    Your form has been successfully submitted. 🎉
                     <br/><br/>
-                    Now request to join the NexaSphere WhatsApp group using the link below â€” and
+                    Now request to join the NexaSphere WhatsApp group using the link below — and
                     <b style={{ color:'var(--t1)' }}> mention that you have already filled the NexaSphere form</b>.
                     <br/><br/>
                     Our team will verify your responses and add you to the respective NexaSphere spaces/groups.
@@ -832,8 +832,8 @@ export default function MembershipPage({ onBack }) {
                   borderRadius:'var(--r2)', padding:'14px 16px',
                   fontSize:'.88rem', color:'var(--t3)', lineHeight:1.7, textAlign:'center',
                 }}>
-                  ðŸ“Œ Also make sure to follow the official NexaSphere LinkedIn page for updates.<br/>
-                  <b style={{ color:'var(--t2)' }}>Stay connected and keep building ðŸš€ â€” NexaSphere Team</b>
+                  📌 Also make sure to follow the official NexaSphere LinkedIn page for updates.<br/>
+                  <b style={{ color:'var(--t2)' }}>Stay connected and keep building 🚀 — NexaSphere Team</b>
                 </div>
               </div>
             ) : (

@@ -822,7 +822,14 @@ const pushSubscriptions = new Set();
 app.post('/api/notifications/subscribe', (req, res) => {
   try {
     const { subscription } = req.body;
-    if (subscription) pushSubscriptions.add(JSON.stringify(subscription));
+        if (subscription) {
+      pushSubscriptions.add(JSON.stringify(subscription));
+      // Prevent memory leak by capping maximum subscriptions to 10,000
+      if (pushSubscriptions.size > 10000) {
+        const oldest = pushSubscriptions.values().next().value;
+        pushSubscriptions.delete(oldest);
+      }
+    }
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });

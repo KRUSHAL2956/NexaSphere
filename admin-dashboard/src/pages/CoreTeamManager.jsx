@@ -10,6 +10,7 @@ export function CoreTeamManager() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
@@ -21,6 +22,12 @@ export function CoreTeamManager() {
 
   useEventListener(EVENTS.CORE_TEAM_MEMBER_ADDED, useCallback((member) => {
     setMembers(prev => [...prev, member]);
+    setShowForm(false);
+  }, []));
+
+  useEventListener(EVENTS.CORE_TEAM_MEMBER_UPDATED, useCallback((updated) => {
+    setMembers(prev => prev.map(m => m.id === updated.id ? updated : m));
+    setEditingMember(null);
     setShowForm(false);
   }, []));
 
@@ -44,10 +51,10 @@ export function CoreTeamManager() {
     <div className="page">
       <div className="page-header">
         <h2 className="page-title">Core Team</h2>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Add Member</button>
+        <button className="btn-primary" onClick={() => { setEditingMember(null); setShowForm(true); }}>+ Add Member</button>
       </div>
 
-      {showForm && <CoreTeamForm onClose={() => setShowForm(false)} />}
+      {showForm && <CoreTeamForm member={editingMember} onClose={() => { setShowForm(false); setEditingMember(null); }} />}
 
       {loading && <Skeleton height={72} count={4} />}
 
@@ -65,14 +72,19 @@ export function CoreTeamManager() {
                 <div className="item-meta">{member.role}</div>
                 <div className="item-meta">{member.branch} {member.year && `· ${member.year}`}</div>
               </div>
-              <button
-                className="btn-icon danger"
-                onClick={() => handleRemove(member.id)}
-                disabled={deleting === member.id}
-                aria-label="Remove team member"
-              >
-                {deleting === member.id ? '...' : <AdminIcon name="Trash" size={16} />}
-              </button>
+              <div className="team-actions">
+                <button className="btn-icon" onClick={() => { setEditingMember(member); setShowForm(true); }} aria-label="Edit team member">
+                  <AdminIcon name="Pencil" size={16} />
+                </button>
+                <button
+                  className="btn-icon danger"
+                  onClick={() => handleRemove(member.id)}
+                  disabled={deleting === member.id}
+                  aria-label="Remove team member"
+                >
+                  {deleting === member.id ? '...' : <AdminIcon name="Trash" size={16} />}
+                </button>
+              </div>
             </div>
           ))}
         </div>

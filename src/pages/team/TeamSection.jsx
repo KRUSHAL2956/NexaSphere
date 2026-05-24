@@ -114,7 +114,7 @@ export default function TeamSection({ onApply }) {
   return (
     <section className="section" id="section-team">
       <div className="container">
-        <div>
+        <div className="section-heading">
           <span className="cin-section-label pop-in">GL Bajaj Group of Institutions · Mathura</span>
           <h2 className="section-title pop-word">Core Team</h2>
           <p className="section-subtitle pop-in" style={{ animationDelay: '.1s' }}>The Minds Behind NexaSphere</p>

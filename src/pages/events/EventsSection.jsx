@@ -48,7 +48,7 @@ export default function EventsSection({ onEventClick, events = [] }) {
   return (
     <section className="section" id="section-events">
       <div className="container">
-        <div>
+        <div className="section-heading">
           <h2 className="section-title pop-word">Our Events</h2>
           <p className="section-subtitle pop-in" style={{animationDelay:'.1s'}}>Where Ideas Come to Life</p>
         </div>

@@ -197,7 +197,7 @@ mvn spring-boot:run
 ```properties
 # Admin Credentials
 ADMIN_EMAIL=nexasphere@glbajajgroup.org
-ADMIN_PASSWORD=Admin@123
+ADMIN_PASSWORD=admin@123
 
 # CORS Configuration
 CORS_ORIGIN=http://localhost:5173,https://nexasphere-glbajaj.vercel.app,https://admin-nexasphere.vercel.app
@@ -389,7 +389,7 @@ VITE_API_BASE=http://localhost:8080
 **🔑 Admin Credentials:**
 
 - **Email:** nexasphere@glbajajgroup.org
-- **Password:** Admin@123
+- **Password:** admin@123
 
 <br/>
 
@@ -454,7 +454,7 @@ railway up
 
 ```
 ADMIN_EMAIL=nexasphere@glbajajgroup.org
-ADMIN_PASSWORD=Admin@123
+ADMIN_PASSWORD=admin@123
 CORS_ORIGIN=https://nexasphere-glbajaj.vercel.app,https://admin-nexasphere.vercel.app
 DB_URL=jdbc:postgresql://[provided-by-railway]:5432/railway
 DB_DRIVER=org.postgresql.Driver

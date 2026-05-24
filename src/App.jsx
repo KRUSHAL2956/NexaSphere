@@ -29,6 +29,8 @@ import {
   useNsReveal, useHeroParallax,
   useNavScrollTint, useGlobalMouseParallax, useMagneticCards,
 } from './shared/MotionLayer';
+// Admin has moved to the standalone dashboard (admin-dashboard/)
+// The standalone admin app runs separately (dev: http://localhost:5174)
 
 import ActivitiesPage from './pages/activities/ActivitiesPage';
 import EventsPage from './pages/events/EventsPage';
@@ -107,6 +109,52 @@ export default function App() {
             <SectionContent page={page} eventsData={eventsData} actions={actions} />
           )}
 
+<<<<<<< HEAD
+      {cinDone && <AmbientOrbs theme={theme}/>}
+      {cinDone && <GeometricGridBackground theme={theme} />}
+      {cinDone && <ParticleBackground theme={theme}/>}
+      {cinDone && <Navbar activeTab={activeTab} onTabChange={onTab} onToggleTheme={toggleTheme} theme={theme} onApply={openApply} onJoin={openJoin}/>}
+
+      <main style={{paddingTop:nh, position:'relative', zIndex:1}}>
+        {/* If page is null, show home sections. Otherwise show the specific page. */}
+        {page ? (
+           <PageIn k={page.type + (page.section || page.activityKey)}>
+             {page.section === 'Activities' && <ActivitiesPage onNavigate={onNavigate} onBack={onBackHome}/>}
+             {page.section === 'Events' && <EventsPage onBack={onBackHome} onEventClick={onKSSClick} events={eventsData}/>}
+             {page.section === 'About' && <AboutPage onBack={onBackHome}/>}
+             {page.section === 'Team' && <TeamPage onBack={onBackHome} onApply={openApply}/>}
+             {page.section === 'Contact' && <ContactPage onBack={onBackHome}/>}
+             {page.type === 'activity' && cur && <ActivityDetailPage activity={cur} onBack={onBackMain} onSelectEvent={onEvent}/>}
+             {page.type === 'apply' && <RecruitmentPage onBack={onBackHome}/>}
+             {page.type === 'join' && <MembershipPage onBack={onBackHome}/>}
+            {page.type === 'admin' && (
+              <div style={{ maxWidth: 760, margin: '6vh auto', padding: '2rem', textAlign: 'center', borderRadius: 12, background: 'var(--card)', boxShadow: 'var(--shadow-card)' }}>
+                <button onClick={onBackHome} className="btn-back">← Back</button>
+                <h2 style={{ marginTop: 12 }}>Admin Panel moved</h2>
+                <p style={{ opacity: 0.8 }}>The admin interface now lives in the standalone NexaSphere Control Center. Run it locally from <code>admin-dashboard/</code> or open the deployed admin URL below.</p>
+                <div style={{ marginTop: 18 }}>
+                  <a href={import.meta.env.DEV ? 'http://localhost:5174' : 'https://admin.nexasphere-glbajaj.vercel.app'} target="_blank" rel="noreferrer" className="btn btn-primary">Open NexaSphere Control Center</a>
+                </div>
+              </div>
+            )}
+             {page.type === 'event' && page.event && <EventDetailPage event={page.event} onBack={page.activityKey ? onBackAct : onBackMain}/>}
+             {/* 404 fallback for unknown page types */}
+             {page.type && !['section','activity','event','apply','join'].includes(page.type) && <NotFoundPage onGoHome={onBackHome}/>}
+           </PageIn>
+        ) : (
+          cinDone && (
+            <PageIn k="main">
+              <HeroSection onTabChange={onTab} onApply={openApply} onJoin={openJoin} theme={theme}/>
+              <SectionDivider/>
+              <ActivitiesSection onNavigate={onNavigate}/>
+              <SectionDivider/>
+              <EventsSection onEventClick={onKSSClick} events={eventsData}/>
+              <SectionDivider/>
+              <AboutSection/>
+              <SectionDivider/>
+              <TeamSection onApply={openApply}/>
+              <Footer onAdmin={() => nav(() => setPage({ type: 'admin' }))} />
+=======
           {page?.type === 'activity' && currentActivity && (
             <PageIn k={`a-${page.activityKey}`}>
               <ActivityDetailPage
@@ -114,6 +162,7 @@ export default function App() {
                 onBack={() => performTransition(() => setPage({ type: 'section', section: 'Activities' }))}
                 onSelectEvent={actions.onEvent}
               />
+>>>>>>> upstream/main
             </PageIn>
           )}
 

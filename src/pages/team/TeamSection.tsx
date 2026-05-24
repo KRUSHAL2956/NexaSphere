@@ -136,7 +136,7 @@ export default function TeamSection({ onApply }: TeamSectionProps): ReactNode {
   return (
     <section className="section" id="section-team">
       <div className="container">
-        <div className="ns-reveal">
+        <div className="section-heading ns-reveal">
           <span className="cin-section-label pop-in">GL Bajaj Group of Institutions · Mathura</span>
           <h2 className="section-title pop-word">Core Team</h2>
           <p className="section-subtitle pop-in" style={{ animationDelay: '0.1s' }}>

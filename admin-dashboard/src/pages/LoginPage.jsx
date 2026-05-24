@@ -30,7 +30,7 @@ export function LoginPage() {
         <div className="login-logo">
           <span className="brand-dot lg" />
         </div>
-        <h1 className="login-title">NexaSphere Admin</h1>
+        <h1 className="login-title">NexaSphere Control Center</h1>
         <p className="login-sub">GL Bajaj Group of Institutions</p>
         <form onSubmit={handleSubmit} className="form">
           <div className="form-row">
@@ -39,7 +39,7 @@ export function LoginPage() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="admin@nexasphere.in"
+              placeholder="nexasphere@glbajajgroup.org"
               required
               autoFocus
             />
@@ -86,6 +86,7 @@ export function LoginPage() {
           <button type="submit" className="btn-primary full-width" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
+          <div className="login-hint">Use Email: <strong>nexasphere@glbajajgroup.org</strong> and Password: <strong>admin@123</strong></div>
         </form>
       </div>
     </div>

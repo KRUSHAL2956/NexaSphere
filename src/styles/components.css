@@ -286,8 +286,8 @@
   align-items:center;
   justify-content:center;
   overflow:hidden;
-  margin-top:-64px;
-  padding-top:64px;
+  margin-top: calc(var(--nh) * -1);
+  padding-top: var(--nh);
 }
 .hero-bg { position:absolute; inset:0; background-size:cover; background-position:center; filter:brightness(.14) saturate(1.3); z-index:0; transform:scale(1.05); }
 [data-theme="light"] .hero-bg { filter:brightness(.06) saturate(.6); }
@@ -332,8 +332,8 @@
 
 @media (max-width: 768px) {
   .hero-section {
-    margin-top:-88px;
-    padding-top:88px;
+    margin-top: calc(var(--nhm) * -1);
+    padding-top: var(--nhm);
   }
 }
 

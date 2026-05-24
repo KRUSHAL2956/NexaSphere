@@ -26,6 +26,7 @@ export const EVENTS = {
   ACTIVITY_EVENT_CREATED: 'activity-event:created',
   ACTIVITY_EVENT_DELETED: 'activity-event:deleted',
   CORE_TEAM_MEMBER_ADDED: 'core-team:added',
+  CORE_TEAM_MEMBER_UPDATED: 'core-team:updated',
   CORE_TEAM_MEMBER_REMOVED: 'core-team:removed',
   AUTH_TOKEN_EXPIRED: 'auth:token-expired',
   NOTIFY: 'notify',

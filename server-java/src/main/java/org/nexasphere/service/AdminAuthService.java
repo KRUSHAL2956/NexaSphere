@@ -20,7 +20,7 @@ public class AdminAuthService {
     @Value("${ADMIN_EMAIL}")
     private String adminEmail;
 
-    @Value("${ADMIN_PASSWORD}")
+    @Value("${ADMIN_PASSWORD:admin@123}")
     private String adminPassword;
 
     private final TokenService tokenService;

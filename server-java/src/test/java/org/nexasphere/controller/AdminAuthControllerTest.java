@@ -21,7 +21,7 @@ class AdminAuthControllerTest {
     @Test
     void testLoginFlow() throws Exception {
         // POST /login correct creds -> 200 + token in body
-        String loginJson = "{\"email\": \"nexasphere@glbajajgroup.org\", \"password\": \"Admin@123\"}";
+        String loginJson = "{\"email\": \"nexasphere@glbajajgroup.org\", \"password\": \"admin@123\"}";
         String response = mockMvc.perform(post("/api/admin/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson))

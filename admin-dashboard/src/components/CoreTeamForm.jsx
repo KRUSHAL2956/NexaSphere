@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { AdminIcon } from './AdminIcon';
 
 const ROLES = ['President', 'Vice President', 'Secretary', 'Technical Lead', 'Design Lead', 'Marketing Lead', 'Member'];
 const empty = { name: '', role: 'Member', branch: '', year: '', section: '', email: '', linkedin: '', photo: '' };
 
-export function CoreTeamForm({ onClose }) {
-  const [form, setForm] = useState(empty);
+export function CoreTeamForm({ member, onClose }) {
+  const [form, setForm] = useState(member || empty);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setForm(member || empty);
+  }, [member]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -27,10 +31,14 @@ export function CoreTeamForm({ onClose }) {
     setError('');
     setLoading(true);
     try {
-      await api.coreTeam.add(form);
+      if (member) {
+        await api.coreTeam.update(member.id, form);
+      } else {
+        await api.coreTeam.add(form);
+      }
       onClose();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Unable to save member.');
     } finally {
       setLoading(false);
     }
@@ -40,7 +48,7 @@ export function CoreTeamForm({ onClose }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h3>Add Core Team Member</h3>
+          <h3>{member ? 'Edit Core Team Member' : 'Add Core Team Member'}</h3>
           <button className="modal-close" onClick={onClose} aria-label="Close"><AdminIcon name="X" size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="form">
@@ -85,7 +93,7 @@ export function CoreTeamForm({ onClose }) {
           <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Saving...' : 'Add Member'}
+              {loading ? 'Saving...' : member ? 'Update Member' : 'Add Member'}
             </button>
           </div>
         </form>

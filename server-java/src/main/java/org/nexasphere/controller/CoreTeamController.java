@@ -37,6 +37,22 @@ public class CoreTeamController {
         return ResponseEntity.status(HttpStatus.CREATED).body(repo.save(member));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<CoreTeamMemberEntity> update(@PathVariable Long id, @Valid @RequestBody CoreTeamMemberEntity member) {
+        return repo.findById(id)
+                .map(existing -> {
+                    existing.setName(sanitizer.clean(member.getName()));
+                    existing.setRole(member.getRole());
+                    existing.setBranch(member.getBranch());
+                    existing.setYear(member.getYear());
+                    existing.setEmail(member.getEmail());
+                    existing.setLinkedin(member.getLinkedin());
+                    existing.setPhoto(member.getPhoto());
+                    return ResponseEntity.ok(repo.save(existing));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> remove(@PathVariable Long id) {
         if (!repo.existsById(id)) return ResponseEntity.notFound().build();

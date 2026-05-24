@@ -100,7 +100,7 @@ export const activityEventsService = {
   },
 
   async assertCanManage(auth) {
-    const expectedPassword = process.env.ADMIN_EVENT_PASSWORD || 'Admin@123';
+    const expectedPassword = process.env.ADMIN_EVENT_PASSWORD || 'admin@123';
     if (String(auth?.password || '') !== expectedPassword) throw new Error('Unauthorized');
     const n = String(auth?.name || '').trim().toLowerCase();
     const e = String(auth?.email || '').trim().toLowerCase();

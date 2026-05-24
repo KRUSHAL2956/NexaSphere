@@ -1,39 +1,4 @@
-# NexaSphere Admin Dashboard
-
-Standalone React admin panel for managing NexaSphere content.
-
-## Setup
-
-```bash
-npm install
-cp .env.example .env        # set VITE_API_BASE to your Java backend URL
-npm run dev                 # runs on http://localhost:5174
-```
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE` | Java backend URL (e.g. `https://api.nexasphere.in`) |
-
-## Deployment (Vercel)
-
-1. Create a new Vercel project pointing to the `admin-dashboard/` folder
-2. Set `VITE_API_BASE` environment variable
-3. Deploy — access via `admin.nexasphere-glbajaj.vercel.app`
-
-Also add the admin dashboard URL to `CORS_ORIGIN` in the Java backend environment.
-
-## Features
-
-- Login with email/password → JWT stored in localStorage
-- Events CRUD (create, edit, delete)
-- Activity Events management per category (8 activity types)
-- Core Team member add/remove
-- Event-driven UI — no page reloads on mutations
-- Skeleton loaders, toast notifications, confirm dialogs
-- Auto-redirect to login on session expiry
-## 👨‍💼 NexaSphere Admin Dashboard
+# 👨‍💼 NexaSphere Admin Dashboard
 
 ## Standalone React + Vite Application
 
@@ -97,7 +62,33 @@ Dedicated admin application providing:
 ```bash
 cd admin-dashboard
 npm install
+cp .env.example .env        # set VITE_API_BASE to your Java backend URL
+npm run dev                 # runs on http://localhost:5174
 ```
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_API_BASE` | Java backend URL (e.g. `https://api.nexasphere.in`) |
+
+## Deployment (Vercel)
+
+1. Create a new Vercel project pointing to the `admin-dashboard/` folder
+2. Set `VITE_API_BASE` environment variable
+3. Deploy — access via `admin.nexasphere-glbajaj.vercel.app`
+
+Also add the admin dashboard URL to `CORS_ORIGIN` in the Java backend environment.
+
+## Features
+
+- Login with email/password → JWT stored in localStorage
+- Events CRUD (create, edit, delete)
+- Activity Events management per category (8 activity types)
+- Core Team member add/remove
+- Event-driven UI — no page reloads on mutations
+- Skeleton loaders, toast notifications, confirm dialogs
+- Auto-redirect to login on session expiry
 
 <br/>
 
@@ -139,11 +130,16 @@ npm run dev
 
 ## 🔑 Login Credentials
 
-<br/>
+By default the admin dashboard ships with a developer-friendly fallback credential set (for local development). When using the standalone dashboard without connecting to a production Java backend, you can use:
 
+<<<<<<< HEAD
+- Email: `nexasphere@glbajajgroup.org`
+- Password: `admin@123`
+=======
 Admin credentials are configured on the Spring Boot server with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Do not commit real production credentials.
+>>>>>>> upstream/main
 
-<br/>
+For security, the live Java backend enforces a stronger password policy; to allow the weaker local credential during development set the environment variable `VITE_ALLOW_WEAK_ADMIN=true` in your `.env` (or rely on `import.meta.env.DEV` during local development).
 
 ---
 ## 📋 Environment Variables

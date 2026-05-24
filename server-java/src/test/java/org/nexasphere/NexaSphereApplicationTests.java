@@ -54,7 +54,7 @@ class NexaSphereApplicationTests {
 
     @Test
     void loginReturnsTokenAndAllowsAccess() throws Exception {
-        String payload = "{\"email\":\"nexasphere@glbajajgroup.org\",\"password\":\"Admin@123\"}";
+        String payload = "{\"email\":\"nexasphere@glbajajgroup.org\",\"password\":\"admin@123\"}";
 
         MvcResult login = mockMvc.perform(post("/api/admin/login")
                         .contentType(MediaType.APPLICATION_JSON)

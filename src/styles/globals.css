@@ -10,13 +10,13 @@ html {
   scrollbar-color: var(--c1) var(--bg);
 }
 body  {
-  cursor: none;
   background: var(--bg);
   color: var(--t1);
-  font-family: 'Rajdhani', sans-serif;
+  font-family: 'Rajdhani', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 16px;
   line-height: 1.65;
   overflow-x: hidden;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 @media (hover: none) { body, button, a { cursor: auto !important; } }
@@ -39,7 +39,7 @@ body  {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Orbitron', 'Inter', system-ui, sans-serif;
   font-weight: 700;
   line-height: 1.15;
   color: var(--t1);
@@ -47,15 +47,30 @@ h1, h2, h3, h4, h5, h6 {
 p  { line-height: 1.78; color: var(--t2); }
 a  { color: var(--c1); text-decoration: none; cursor: none; }
 img, svg { display: block; max-width: 100%; }
-button { cursor: none; font-family: 'Rajdhani', sans-serif; border: none; background: none; }
-button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; font-family: inherit; border: none; background: none; }
+button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
 
 .container { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 28px; }
 .section   { padding: 100px 0; }
 
+.section-heading {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .section-title {
   font-size: clamp(1.8rem, 4.5vw, 2.8rem);
+  width: 100%;
+  max-width: 100%;
   text-align: center;
+  align-self: stretch;
+  margin-left: auto;
+  margin-right: auto;
   margin-bottom: 10px;
   background: linear-gradient(135deg, var(--c1) 0%, var(--c2) 60%, var(--c3) 100%);
   -webkit-background-clip: text;

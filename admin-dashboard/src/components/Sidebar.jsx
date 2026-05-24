@@ -18,7 +18,7 @@ export function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-brand">
         <span className="brand-dot" />
-        <span>NexaSphere Admin</span>
+        <span>NexaSphere Control Center</span>
       </div>
       <nav className="sidebar-nav">
         {links.map(({ to, label, icon }) => (

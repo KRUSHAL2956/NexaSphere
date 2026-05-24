@@ -130,8 +130,8 @@ mvn spring-boot:run
 
 | Variable           | Example                     | Purpose                  |
 | ------------------ | --------------------------- | ------------------------ |
-| **ADMIN_EMAIL**    | admin@example.com           | Admin login email        |
-| **ADMIN_PASSWORD** | use-a-strong-secret         | Admin login password     |
+| **ADMIN_EMAIL**    | nexasphere@glbajajgroup.org | Admin login email        |
+| **ADMIN_PASSWORD** | admin@123                   | Admin login password     |
 | **CORS_ORIGIN**    | http://localhost:5173       | Allowed frontend origins |
 
 <br/>
@@ -164,7 +164,21 @@ spring.datasource.password=${DB_PASS}
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=false
 
+<<<<<<< HEAD
+# ========== Admin Credentials ==========
+app.admin.email=nexasphere@glbajajgroup.org
+app.admin.password=admin@123
+
+# ========== CORS Configuration ==========
+app.cors.origin=http://localhost:5173,https://nexasphere-glbajaj.vercel.app
+
+# ========== Logging ==========
+logging.level.root=INFO
+logging.level.org.nexasphere=DEBUG
+logging.level.org.springframework.web=DEBUG
+=======
 CORS_ORIGIN=${CORS_ORIGIN:http://localhost:5173}
+>>>>>>> upstream/main
 ```
 
 <br/>
@@ -341,8 +355,13 @@ POST   /api/admin/logout
 curl -X POST http://localhost:8080/api/admin/login \
   -H "Content-Type: application/json" \
   -d '{
+<<<<<<< HEAD
+    "email":"nexasphere@glbajajgroup.org",
+    "password":"admin@123"
+=======
     "email":"admin@example.com",
     "password":"your-admin-password"
+>>>>>>> upstream/main
   }'
 ```
 
@@ -443,8 +462,13 @@ railway up
 In Railway Dashboard, add:
 
 ```
+<<<<<<< HEAD
+ADMIN_EMAIL=nexasphere@glbajajgroup.org
+ADMIN_PASSWORD=admin@123
+=======
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=your-admin-password
+>>>>>>> upstream/main
 CORS_ORIGIN=https://nexasphere-glbajaj.vercel.app
 DB_URL=jdbc:postgresql://[rail-host]:5432/railway
 DB_DRIVER=org.postgresql.Driver

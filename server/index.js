@@ -31,6 +31,10 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '512kb' }));
 
+function redactUrl(url) {
+  return url.replace(/[?&]token=[^&\s]+/gi, '$1token=REDACTED');
+}
+
 function requestLogger(req, res, next) {
   const start = process.hrtime.bigint();
   const { method, path } = req;
@@ -38,7 +42,9 @@ function requestLogger(req, res, next) {
   res.on('finish', () => {
     const duration = Number(process.hrtime.bigint() - start) / 1e6;
     const status = res.statusCode;
-    const message = `[${method}] ${path} → ${status} (${Math.round(duration)}ms)`;
+    const redactedPath = redactUrl(path);
+    const redactedUrl = req.originalUrl ? redactUrl(req.originalUrl) : redactedPath;
+    const message = `[${method}] ${redactedUrl} → ${status} (${Math.round(duration)}ms)`;
 
     if (status >= 500) {
       console.error(message);

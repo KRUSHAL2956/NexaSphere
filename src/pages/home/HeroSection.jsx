@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import Image from 'next/image';
 import { BRAND_LOGO_ICON } from '../../shared/brandAssets';
 import { IconArrowRight, IconSpark, DynamicIcon } from '../../shared/Icons';
 
@@ -85,7 +84,7 @@ function Logo3D({ ready, isLight }) {
       }}
     >
       <OrbitRings isLight={isLight}/>
-      <Image src={BRAND_LOGO_ICON} alt="NexaSphere" className="hero-logo-img" width={220} height={220} />
+      <img src={BRAND_LOGO_ICON} alt="NexaSphere" className="hero-logo-img" width={220} height={220} />
       <div style={{position:'absolute',bottom:'-8px',left:'50%',transform:'translateX(-50%)',width:'90px',height:'14px',borderRadius:'50%',background:`radial-gradient(ellipse,${isLight?'rgba(204,17,17,.22)':'rgba(204,17,17,.32)'},transparent 70%)`,filter:'blur(5px)',animation:'float 5s ease-in-out infinite'}}/>
     </div>
   );

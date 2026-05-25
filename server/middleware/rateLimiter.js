@@ -21,3 +21,14 @@ export const authRateLimiter = rateLimit({
     error: 'Too many login attempts, please try again after a minute.',
   },
 });
+
+// Notification mutation rate limiter: 60 requests per IP per 15 minutes
+export const notificationRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many notification requests, please try again later.',
+  },
+});

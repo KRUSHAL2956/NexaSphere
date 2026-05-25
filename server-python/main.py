@@ -49,9 +49,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def root():
     return {"message": "NexaSphere AI Core API is running. Visit /docs for Swagger API documentation."}
 
-from routers import forms, recommend, notifications, portfolio
+from routers import forms, recommend, certificates, notifications
 app.include_router(forms.router)
 app.include_router(recommend.router)
+app.include_router(certificates.router)
 app.include_router(notifications.router)
 app.include_router(portfolio.router)
 # 3. CORS Configuration

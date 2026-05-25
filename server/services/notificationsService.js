@@ -2,6 +2,7 @@
  * Simple in-memory notifications service.
  * For production, replace with DB-backed implementation (Postgres, Mongo, etc.).
  */
+const MAX_PER_USER = 10000;
 const notificationsStore = new Map(); // key: userId|'global', value: array
 
 function _ensureList(userId = 'global') {
@@ -15,6 +16,9 @@ export function getNotifications(userId = 'global') {
 
 export function addNotification(userId = 'global', payload = {}) {
   const list = _ensureList(userId);
+  while (list.length >= MAX_PER_USER) {
+    list.pop();
+  }
   const id = `${Date.now()}-${Math.random().toString(36).substr(2,6)}`;
   const note = {
     id,
@@ -50,7 +54,11 @@ export function clearAll(userId = 'global') {
 export function removeNotification(userId = 'global', id) {
   const list = _ensureList(userId);
   const idx = list.findIndex(n => n.id === id);
-  if (idx >= 0) list.splice(idx, 1);
+  if (idx >= 0) {
+    list.splice(idx, 1);
+    return true;
+  }
+  return false;
 }
 
 export default {

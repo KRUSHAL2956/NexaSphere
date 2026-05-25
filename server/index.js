@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import helmet from 'helmet';
 import express from 'express';
 import { EventEmitter } from 'events';
 import cors from 'cors';
@@ -17,21 +18,28 @@ import { initializeSocketIO, emitToRoom, getRoom } from './config/socket.js';
 import adminStreamRouter from './routes/adminStream.js';
 import { broadcastSSEEvent } from './services/sseService.js';
 import rateLimit from 'express-rate-limit';
-import { apiRateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
+import { apiRateLimiter, authRateLimiter, notificationRateLimiter } from './middleware/rateLimiter.js';
 
 import { portfolioRepository } from './repositories/portfolioRepository.js';
+import { Mutex } from 'async-mutex';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CONTENT_FILE = path.join(__dirname, 'data', 'content.json');
 
 const app = express();
+app.use(helmet());
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean) : true,
   credentials: false,
 }));
 app.use(express.json({ limit: '512kb' }));
+
+function redactUrl(url) {
+  return url.replace(/[?&]token=[^&\s]+/gi, '$1token=REDACTED');
+}
 
 function requestLogger(req, res, next) {
   const start = process.hrtime.bigint();
@@ -40,7 +48,9 @@ function requestLogger(req, res, next) {
   res.on('finish', () => {
     const duration = Number(process.hrtime.bigint() - start) / 1e6;
     const status = res.statusCode;
-    const message = `[${method}] ${path} → ${status} (${Math.round(duration)}ms)`;
+    const redactedPath = redactUrl(path);
+    const redactedUrl = req.originalUrl ? redactUrl(req.originalUrl) : redactedPath;
+    const message = `[${method}] ${redactedUrl} → ${status} (${Math.round(duration)}ms)`;
 
     if (status >= 500) {
       console.error(message);
@@ -112,6 +122,25 @@ function requiredStrongPassword(name) {
 
 const ADMIN_EVENT_PASSWORD = requiredStrongPassword('ADMIN_EVENT_PASSWORD');
 
+if (process.env.PUBLIC_APP_URL) {
+  if (process.env.PUBLIC_APP_URL.includes(',')) {
+    throw new Error('PUBLIC_APP_URL must be a single URL, not a comma-separated list');
+  }
+  try {
+    new URL(process.env.PUBLIC_APP_URL);
+  } catch {
+    throw new Error(`PUBLIC_APP_URL must be a valid absolute URL, got: ${process.env.PUBLIC_APP_URL}`);
+  }
+}
+
+function getPublicAppUrl() {
+  if (process.env.PUBLIC_APP_URL) {
+    return process.env.PUBLIC_APP_URL.replace(/\/+$/, '');
+  }
+  const firstOrigin = process.env.CORS_ORIGIN?.split(',')[0]?.trim();
+  return firstOrigin || 'http://localhost:5173';
+}
+
 function normalizePrivateKey(k) {
   return k.includes('\\n') ? k.replace(/\\n/g, '\n') : k;
 }
@@ -124,6 +153,23 @@ async function ensureContentFile() {
   } catch {
     await fs.writeFile(CONTENT_FILE, JSON.stringify(defaultContent, null, 2), 'utf8');
   }
+}
+const fileMutex = new Mutex();
+
+async function readContent() {
+  await ensureContentFile();
+  const raw = await fs.readFile(CONTENT_FILE, 'utf8');
+  return JSON.parse(raw);
+}
+
+async function writeContent(content) {
+  await ensureContentFile();
+  await fs.writeFile(CONTENT_FILE, JSON.stringify(content, null, 2), 'utf8');
+}
+
+// Helper to safely run file operations atomically
+export async function runWithFileLock(callback) {
+  return await fileMutex.runExclusive(callback);
 }
 
 async function readContent() {
@@ -262,6 +308,7 @@ async function createEventStore(event) {
       icon: event.icon,
       tags: event.tags,
     };
+    
     let row;
     try {
       [row] = await supabaseRequest('events', { method: 'POST', body: [payload] });
@@ -283,6 +330,8 @@ async function createEventStore(event) {
       updatedAt: row.updated_at,
     });
   }
+  
+  // Safe atomic fallback operation preventing data loss using async-mutex
   return withContentLock(async () => {
     const content = await readContent();
     content.events.unshift({ ...event, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
@@ -290,7 +339,6 @@ async function createEventStore(event) {
     return sanitizeEventRecord(content.events[0]);
   });
 }
-
 async function updateEventStore(id, patch) {
   if (HAS_SUPABASE) {
     const [row] = await supabaseRequest(`events?id=eq.${encodeURIComponent(id)}`, {
@@ -788,7 +836,7 @@ async function handleForm(formType, req, res) {
 
     // NEW: Send a welcome email to the user
     try {
-      const verifyUrl = `${process.env.CORS_ORIGIN || 'http://localhost:5173'}/verify?email=${encodeURIComponent(req.body.collegeEmail)}`;
+      const verifyUrl = `${getPublicAppUrl()}/verify?email=${encodeURIComponent(req.body.collegeEmail)}`;
       await sendWelcomeVerificationEmail(req.body.collegeEmail, req.body.fullName, verifyUrl);
     } catch (emailErr) {
       console.error('[Form Handler] Failed to send welcome email:', emailErr);
@@ -938,7 +986,7 @@ app.get('/api/notifications', (req, res) => {
   }
 });
 
-app.post('/api/notifications/mark-read', (req, res) => {
+app.post('/api/notifications/mark-read', adminAuth, notificationRateLimiter, (req, res) => {
   try {
     const { id, userId } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id required' });
@@ -950,7 +998,7 @@ app.post('/api/notifications/mark-read', (req, res) => {
   }
 });
 
-app.post('/api/notifications/mark-all-read', (req, res) => {
+app.post('/api/notifications/mark-all-read', adminAuth, notificationRateLimiter, (req, res) => {
   try {
     const { userId } = req.body || {};
     notificationsService.markAllAsRead(userId || 'global');
@@ -960,11 +1008,12 @@ app.post('/api/notifications/mark-all-read', (req, res) => {
   }
 });
 
-app.delete('/api/notifications/:id', (req, res) => {
+app.delete('/api/notifications/:id', adminAuth, notificationRateLimiter, (req, res) => {
   try {
     const id = req.params.id;
     const userId = req.query.userId || 'global';
-    notificationsService.removeNotification(userId, id);
+    const removed = notificationsService.removeNotification(userId, id);
+    if (!removed) return res.status(404).json({ error: 'Notification not found' });
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -972,7 +1021,7 @@ app.delete('/api/notifications/:id', (req, res) => {
 });
 
 // Delete all notifications for a user (or global)
-app.delete('/api/notifications', (req, res) => {
+app.delete('/api/notifications', adminAuth, notificationRateLimiter, (req, res) => {
   try {
     const userId = req.query.userId || 'global';
     notificationsService.clearAll(userId);
@@ -983,9 +1032,10 @@ app.delete('/api/notifications', (req, res) => {
 });
 
 // Create notification (admin/testing)
-app.post('/api/notifications', (req, res) => {
+app.post('/api/notifications', adminAuth, notificationRateLimiter, (req, res) => {
   try {
     const { userId, title, message, type, link } = req.body || {};
+    if (!title || !message) return res.status(400).json({ error: 'title and message are required' });
     const note = notificationsService.addNotification(userId || 'global', { title, message, type, link });
     return res.json({ success: true, notification: note });
   } catch (err) {
@@ -1055,6 +1105,11 @@ app.put('/api/portfolio', portfolioRateLimiter, async (req, res) => {
 
 process.on('unhandledRejection', (reason) => {
   console.error('[Process] Unhandled rejection:', reason instanceof Error ? reason.message : reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught exception:', err instanceof Error ? err.message : err);
+  if (err && err.stack) console.error(err.stack);
 });
 
 const port = Number(process.env.PORT || 8787);

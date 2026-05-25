@@ -92,6 +92,46 @@ export function initializeSocketIO(httpServer) {
       logger.info('User left room', { socketId: socket.id, room: roomName });
     });
 
+    // Join workspace room (Issue #205)
+    socket.on('join_room', (roomId, user) => {
+      socket.join(roomId);
+      logger.info('User joined workspace room', { socketId: socket.id, roomId });
+      socket.to(roomId).emit('user_joined', { socketId: socket.id, user, timestamp: Date.now() });
+    });
+
+    // Leave workspace room
+    socket.on('leave_room', (roomId) => {
+      socket.leave(roomId);
+      logger.info('User left workspace room', { socketId: socket.id, roomId });
+      socket.to(roomId).emit('user_left', { socketId: socket.id });
+    });
+
+    // Workspace synchronization events
+    socket.on('workspace_update', (data) => {
+      const { roomId, ...payload } = data;
+      if (roomId) socket.to(roomId).emit('workspace_update', payload);
+    });
+
+    socket.on('document_change', (data) => {
+      const { roomId, ...payload } = data;
+      if (roomId) socket.to(roomId).emit('document_change', payload);
+    });
+
+    socket.on('cursor_moved', (data) => {
+      const { roomId, ...payload } = data;
+      if (roomId) socket.to(roomId).emit('cursor_moved', { socketId: socket.id, ...payload });
+    });
+
+    socket.on('typing_start', (data) => {
+      const { roomId, ...payload } = data;
+      if (roomId) socket.to(roomId).emit('typing_start', { socketId: socket.id, ...payload });
+    });
+
+    socket.on('typing_stop', (data) => {
+      const { roomId, ...payload } = data;
+      if (roomId) socket.to(roomId).emit('typing_stop', { socketId: socket.id, ...payload });
+    });
+
     // Authenticate socket for admin rooms using admin token
     socket.on('admin:authenticate', async ({ token } = {}) => {
       if (!token) {

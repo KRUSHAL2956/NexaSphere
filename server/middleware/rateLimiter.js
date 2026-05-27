@@ -91,16 +91,6 @@ export const notificationRateLimiter = rateLimit({
   },
 });
 
-// Generic API rate limiter: 100 requests per IP per 15 minutes
-export const apiRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: "Too many API requests, please try again later.",
-  },
-});
 
 // Portfolio update rate limiter — 10 requests per IP per 15 minutes
 export const portfolioRateLimiter = rateLimit({

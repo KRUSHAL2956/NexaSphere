@@ -39,10 +39,15 @@ async function renderTemplate(templateName, data) {
   return ejs.render(templateStr, data);
 }
 
+export let sendEmailOverride = null;
+
 /**
  * Send an email with HTML generated from a template.
  */
 export async function sendEmail({ to, subject, templateName, data, from = defaultFrom }) {
+  if (sendEmailOverride) {
+    return await sendEmailOverride({ to, subject, templateName, data, from });
+  }
   try {
     const html = await renderTemplate(templateName, data);
 
@@ -105,4 +110,84 @@ export async function sendRSVPConfirmationEmail(to, name, eventDetails) {
     templateName: 'rsvp-confirmation',
     data: { name, ...eventDetails },
   });
+}
+
+/**
+ * Send a Registration Confirmation Email
+ */
+export async function sendRegistrationConfirmationEmail(to, eventDetails) {
+  return sendEmail({
+    to,
+    subject: `Registration Confirmed: ${eventDetails.eventName}`,
+    templateName: 'rsvp-confirmation',
+    data: { 
+      name: eventDetails.name, 
+      eventName: eventDetails.eventName,
+      eventDate: eventDetails.eventDate,
+      eventLocation: eventDetails.eventLocation || 'NexaSphere HQ',
+      eventTime: eventDetails.eventTime,
+      eventUrl: eventDetails.eventUrl
+    },
+  });
+}
+
+/**
+ * Send a Waitlist Promotion Email
+ */
+export async function sendWaitlistPromotionEmail(to, eventDetails) {
+  return sendEmail({
+    to,
+    subject: `🎉 Promoted from Waitlist: ${eventDetails.eventName}`,
+    templateName: 'rsvp-confirmation',
+    data: { 
+      name: eventDetails.name, 
+      eventName: eventDetails.eventName,
+      eventDate: eventDetails.eventDate,
+      eventLocation: 'Promoted - Access Granted',
+      eventTime: eventDetails.eventTime,
+      eventUrl: eventDetails.eventLink
+    },
+  });
+}
+
+/**
+ * Send an Event Reminder Email
+ */
+export async function sendEventReminderEmail(to, eventDetails) {
+  return sendEmail({
+    to,
+    subject: `⏰ Reminder: ${eventDetails.eventName} is coming up!`,
+    templateName: 'rsvp-confirmation',
+    data: { 
+      name: eventDetails.name, 
+      eventName: eventDetails.eventName,
+      eventDate: eventDetails.eventDate,
+      eventLocation: eventDetails.eventLocation || 'NexaSphere HQ',
+      eventTime: eventDetails.eventTime,
+      eventUrl: eventDetails.eventLink
+    },
+  });
+}
+
+/**
+ * Send an Attendance Confirmation Email
+ */
+export async function sendAttendanceConfirmationEmail(to, eventDetails) {
+  return sendEmail({
+    to,
+    subject: `Attendance Marked: ${eventDetails.eventName}`,
+    templateName: 'rsvp-confirmation',
+    data: { 
+      name: eventDetails.name, 
+      eventName: eventDetails.eventName,
+      eventDate: eventDetails.eventDate,
+      eventLocation: `Earned ${eventDetails.points || 0} Points`,
+      eventTime: 'Completed',
+      eventUrl: '/'
+    },
+  });
+}
+
+export function setSendEmailOverride(fn) {
+  sendEmailOverride = fn;
 }

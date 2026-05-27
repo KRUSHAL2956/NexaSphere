@@ -40,10 +40,15 @@ export function getMessaging() {
   return messaging;
 }
 
+export let sendPushNotificationOverride = null;
+
 /**
  * Send push notification to user
  */
 export async function sendPushNotification(userToken, notification) {
+  if (sendPushNotificationOverride) {
+    return await sendPushNotificationOverride(userToken, notification);
+  }
   if (!messaging) {
     logger.warn('Push notifications not available');
     return null;
@@ -186,6 +191,10 @@ export async function sendToTopic(topic, notification) {
   }
 }
 
+export function setSendPushNotificationOverride(fn) {
+  sendPushNotificationOverride = fn;
+}
+
 export default {
   initializeFirebase,
   getMessaging,
@@ -193,4 +202,5 @@ export default {
   sendMulticastNotification,
   subscribeToTopic,
   sendToTopic,
+  setSendPushNotificationOverride,
 };

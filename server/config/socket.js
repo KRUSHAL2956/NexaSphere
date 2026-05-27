@@ -187,10 +187,15 @@ export function broadcastEvent(eventName, data) {
   logger.debug('Broadcast event', { event: eventName });
 }
 
+export let emitToRoomOverride = null;
+
 /**
  * Emit event to specific room
  */
 export function emitToRoom(roomName, eventName, data) {
+  if (emitToRoomOverride) {
+    return emitToRoomOverride(roomName, eventName, data);
+  }
   if (!io) return;
   io.to(roomName).emit(eventName, data);
   logger.debug('Emit to room', { room: roomName, event: eventName });
@@ -229,4 +234,8 @@ export function getRoom(roomType) {
   return rooms[roomType] || null;
 }
 
-export default { initializeSocketIO, getIO, broadcastEvent, emitToRoom, emitToUser };
+export function setEmitToRoomOverride(fn) {
+  emitToRoomOverride = fn;
+}
+
+export default { initializeSocketIO, getIO, broadcastEvent, emitToRoom, emitToUser, setEmitToRoomOverride };

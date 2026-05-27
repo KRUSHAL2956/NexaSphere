@@ -1,6 +1,7 @@
 /**
  * Event Emitter Service
  * Manages real-time events for registration, waitlist, reminders, attendance
+ * Resolves cascading SMTP/network integration failures by isolating execution phases.
  */
 
 import EventEmitter from 'events';
@@ -13,7 +14,7 @@ import {
   sendEventReminderEmail,
   sendAttendanceConfirmationEmail,
 } from './emailService.js';
-import { sendPushNotification, sendToTopic } from './pushNotificationService.js';
+import { sendPushNotification } from './pushNotificationService.js';
 
 class RealTimeEventManager extends EventEmitter {
   constructor() {
@@ -39,10 +40,10 @@ class RealTimeEventManager extends EventEmitter {
    * Handle registration confirmed event
    */
   async handleRegistrationConfirmed(data) {
-    try {
-      logger.info('Event: Registration confirmed', { userId: data.userId, eventId: data.eventId });
+    logger.info('Event: Registration confirmed processing started', { userId: data.userId, eventId: data.eventId });
 
-      // Send email
+    // 1. Send Email (Isolated)
+    try {
       await sendRegistrationConfirmationEmail(data.userEmail, {
         name: data.userName,
         eventName: data.eventName,
@@ -50,8 +51,16 @@ class RealTimeEventManager extends EventEmitter {
         eventTime: data.eventTime,
         eventLocation: data.eventLocation,
       });
+      logger.info('Registration confirmed event: Email delivery triggered successfully');
+    } catch (error) {
+      logger.error('Registration confirmed event: Email delivery failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Send push notification
+    // 2. Send Push Notification (Isolated)
+    try {
       if (data.pushToken) {
         await sendPushNotification(data.pushToken, {
           title: 'Registration Confirmed',
@@ -62,35 +71,61 @@ class RealTimeEventManager extends EventEmitter {
           },
           link: `/events/${data.eventId}`,
         });
+        logger.info('Registration confirmed event: Push notification triggered successfully');
       }
+    } catch (error) {
+      logger.error('Registration confirmed event: Push notification failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Broadcast to notifications room
+    // 3. Broadcast to notifications room (WebSocket - Isolated)
+    try {
       emitToRoom(getRoom('notifications'), 'registration-confirmed', {
         userId: data.userId,
         eventId: data.eventId,
         eventName: data.eventName,
         timestamp: new Date(),
       });
+      logger.info('Registration confirmed event: WebSocket user broadcast sent');
+    } catch (error) {
+      logger.error('Registration confirmed event: WebSocket user broadcast failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Persist notification (store per-user if userId provided)
-      try {
-        notificationsService.addNotification(data.userId || 'global', {
-          type: 'connection',
-          title: 'Registration Confirmed',
-          message: `You're registered for ${data.eventName}`,
-          link: `/events/${data.eventId}`,
-        });
-      } catch (err) { logger.warn('Failed to persist notification', { err: err.message }); }
+    // 4. Persist notification (Isolated)
+    try {
+      notificationsService.addNotification(data.userId || 'global', {
+        type: 'connection',
+        title: 'Registration Confirmed',
+        message: `You're registered for ${data.eventName}`,
+        link: `/events/${data.eventId}`,
+      });
+      logger.info('Registration confirmed event: Notification persisted');
+    } catch (error) {
+      logger.warn('Registration confirmed event: Failed to persist notification', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Notify admin
+    // 5. Notify admin dashboard (WebSocket - Isolated)
+    try {
       emitToRoom(getRoom('admin'), 'admin:new-registration', {
         userId: data.userId,
         userName: data.userName,
         eventName: data.eventName,
         timestamp: new Date(),
       });
+      logger.info('Registration confirmed event: WebSocket admin broadcast sent');
     } catch (error) {
-      logger.error('Error handling registration event', { error: error.message });
+      logger.error('Registration confirmed event: WebSocket admin broadcast failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
     }
   }
 
@@ -98,10 +133,10 @@ class RealTimeEventManager extends EventEmitter {
    * Handle waitlist promotion event
    */
   async handleWaitlistPromotion(data) {
-    try {
-      logger.info('Event: Waitlist promotion', { userId: data.userId, eventId: data.eventId });
+    logger.info('Event: Waitlist promotion processing started', { userId: data.userId, eventId: data.eventId });
 
-      // Send email
+    // 1. Send Email (Isolated)
+    try {
       await sendWaitlistPromotionEmail(data.userEmail, {
         name: data.userName,
         eventName: data.eventName,
@@ -110,8 +145,16 @@ class RealTimeEventManager extends EventEmitter {
         confirmationId: data.confirmationId,
         eventLink: `/events/${data.eventId}`,
       });
+      logger.info('Waitlist promotion event: Email delivery triggered successfully');
+    } catch (error) {
+      logger.error('Waitlist promotion event: Email delivery failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Send push notification
+    // 2. Send Push Notification (Isolated)
+    try {
       if (data.pushToken) {
         await sendPushNotification(data.pushToken, {
           title: '🎉 Waitlist Promotion',
@@ -123,34 +166,60 @@ class RealTimeEventManager extends EventEmitter {
           link: `/events/${data.eventId}`,
           tag: 'promotion',
         });
+        logger.info('Waitlist promotion event: Push notification triggered successfully');
       }
+    } catch (error) {
+      logger.error('Waitlist promotion event: Push notification failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Broadcast event
+    // 3. Broadcast event (WebSocket - Isolated)
+    try {
       emitToRoom(getRoom('notifications'), 'waitlist-promotion', {
         userId: data.userId,
         eventId: data.eventId,
         timestamp: new Date(),
       });
+      logger.info('Waitlist promotion event: WebSocket user broadcast sent');
+    } catch (error) {
+      logger.error('Waitlist promotion event: WebSocket user broadcast failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Persist notification
-      try {
-        notificationsService.addNotification(data.userId || 'global', {
-          type: 'mention',
-          title: 'Waitlist Promotion',
-          message: `You've been promoted for ${data.eventName}`,
-          link: `/events/${data.eventId}`,
-        });
-      } catch (err) { logger.warn('Failed to persist notification', { err: err.message }); }
+    // 4. Persist notification (Isolated)
+    try {
+      notificationsService.addNotification(data.userId || 'global', {
+        type: 'mention',
+        title: 'Waitlist Promotion',
+        message: `You've been promoted for ${data.eventName}`,
+        link: `/events/${data.eventId}`,
+      });
+      logger.info('Waitlist promotion event: Notification persisted');
+    } catch (error) {
+      logger.warn('Waitlist promotion event: Failed to persist notification', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Notify admin
+    // 5. Notify admin dashboard (WebSocket - Isolated)
+    try {
       emitToRoom(getRoom('admin'), 'admin:waitlist-promotion', {
         userId: data.userId,
         userName: data.userName,
         eventName: data.eventName,
         timestamp: new Date(),
       });
+      logger.info('Waitlist promotion event: WebSocket admin broadcast sent');
     } catch (error) {
-      logger.error('Error handling waitlist promotion', { error: error.message });
+      logger.error('Waitlist promotion event: WebSocket admin broadcast failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
     }
   }
 
@@ -158,10 +227,10 @@ class RealTimeEventManager extends EventEmitter {
    * Handle event reminder event
    */
   async handleEventReminder(data) {
-    try {
-      logger.info('Event: Reminder sent', { userId: data.userId, eventId: data.eventId });
+    logger.info('Event: Reminder sent processing started', { userId: data.userId, eventId: data.eventId });
 
-      // Send email
+    // 1. Send Email (Isolated)
+    try {
       await sendEventReminderEmail(data.userEmail, {
         name: data.userName,
         eventName: data.eventName,
@@ -171,8 +240,16 @@ class RealTimeEventManager extends EventEmitter {
         timeUntilEvent: data.timeUntilEvent || 'soon',
         eventLink: `/events/${data.eventId}`,
       });
+      logger.info('Event reminder event: Email delivery triggered successfully');
+    } catch (error) {
+      logger.error('Event reminder event: Email delivery failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Send push notification
+    // 2. Send Push Notification (Isolated)
+    try {
       if (data.pushToken) {
         await sendPushNotification(data.pushToken, {
           title: `⏰ ${data.eventName} is coming up!`,
@@ -184,27 +261,45 @@ class RealTimeEventManager extends EventEmitter {
           link: `/events/${data.eventId}`,
           tag: 'reminder',
         });
+        logger.info('Event reminder event: Push notification triggered successfully');
       }
+    } catch (error) {
+      logger.error('Event reminder event: Push notification failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Notify user via WebSocket
+    // 3. Notify user via WebSocket (WebSocket - Isolated)
+    try {
       emitToRoom(getRoom('notifications'), 'event-reminder', {
         userId: data.userId,
         eventId: data.eventId,
         eventName: data.eventName,
         timestamp: new Date(),
       });
-
-      // Persist notification
-      try {
-        notificationsService.addNotification(data.userId || 'global', {
-          type: 'system',
-          title: `Reminder: ${data.eventName}`,
-          message: `${data.eventName} is starting soon`,
-          link: `/events/${data.eventId}`,
-        });
-      } catch (err) { logger.warn('Failed to persist notification', { err: err.message }); }
+      logger.info('Event reminder event: WebSocket user broadcast sent');
     } catch (error) {
-      logger.error('Error handling event reminder', { error: error.message });
+      logger.error('Event reminder event: WebSocket user broadcast failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
+
+    // 4. Persist notification (Isolated)
+    try {
+      notificationsService.addNotification(data.userId || 'global', {
+        type: 'system',
+        title: `Reminder: ${data.eventName}`,
+        message: `${data.eventName} is starting soon`,
+        link: `/events/${data.eventId}`,
+      });
+      logger.info('Event reminder event: Notification persisted');
+    } catch (error) {
+      logger.warn('Event reminder event: Failed to persist notification', { 
+        userId: data.userId, 
+        error: error.message 
+      });
     }
   }
 
@@ -212,18 +307,26 @@ class RealTimeEventManager extends EventEmitter {
    * Handle attendance marked event
    */
   async handleAttendanceMarked(data) {
-    try {
-      logger.info('Event: Attendance marked', { userId: data.userId, eventId: data.eventId });
+    logger.info('Event: Attendance marked processing started', { userId: data.userId, eventId: data.eventId });
 
-      // Send email
+    // 1. Send Email (Isolated)
+    try {
       await sendAttendanceConfirmationEmail(data.userEmail, {
         name: data.userName,
         eventName: data.eventName,
         eventDate: data.eventDate,
         points: data.points,
       });
+      logger.info('Attendance marked event: Email delivery triggered successfully');
+    } catch (error) {
+      logger.error('Attendance marked event: Email delivery failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Send push notification
+    // 2. Send Push Notification (Isolated)
+    try {
       if (data.pushToken) {
         await sendPushNotification(data.pushToken, {
           title: 'Attendance Marked',
@@ -234,27 +337,49 @@ class RealTimeEventManager extends EventEmitter {
             type: 'attendance',
           },
         });
+        logger.info('Attendance marked event: Push notification triggered successfully');
       }
+    } catch (error) {
+      logger.error('Attendance marked event: Push notification failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Broadcast event
+    // 3. Broadcast event (WebSocket - Isolated)
+    try {
       emitToRoom(getRoom('notifications'), 'attendance-marked', {
         userId: data.userId,
         eventId: data.eventId,
         points: data.points,
         timestamp: new Date(),
       });
+      logger.info('Attendance marked event: WebSocket user broadcast sent');
+    } catch (error) {
+      logger.error('Attendance marked event: WebSocket user broadcast failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Persist notification
-      try {
-        notificationsService.addNotification(data.userId || 'global', {
-          type: 'system',
-          title: 'Attendance Marked',
-          message: `Attendance for ${data.eventName} recorded. You earned ${data.points || 0} points.`,
-          link: `/events/${data.eventId}`,
-        });
-      } catch (err) { logger.warn('Failed to persist notification', { err: err.message }); }
+    // 4. Persist notification (Isolated)
+    try {
+      notificationsService.addNotification(data.userId || 'global', {
+        type: 'system',
+        title: 'Attendance Marked',
+        message: `Attendance for ${data.eventName} recorded. You earned ${data.points || 0} points.`,
+        link: `/events/${data.eventId}`,
+      });
+      logger.info('Attendance marked event: Notification persisted');
+    } catch (error) {
+      logger.warn('Attendance marked event: Failed to persist notification', { 
+        userId: data.userId, 
+        error: error.message 
+      });
+    }
 
-      // Notify admin
+    // 5. Notify admin dashboard (WebSocket - Isolated)
+    try {
       emitToRoom(getRoom('admin'), 'admin:attendance-marked', {
         userId: data.userId,
         userName: data.userName,
@@ -262,8 +387,12 @@ class RealTimeEventManager extends EventEmitter {
         points: data.points,
         timestamp: new Date(),
       });
+      logger.info('Attendance marked event: WebSocket admin broadcast sent');
     } catch (error) {
-      logger.error('Error handling attendance event', { error: error.message });
+      logger.error('Attendance marked event: WebSocket admin broadcast failed', { 
+        userId: data.userId, 
+        error: error.message 
+      });
     }
   }
 

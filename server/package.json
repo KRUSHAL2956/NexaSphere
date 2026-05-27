@@ -8,6 +8,7 @@
     "build": "echo \"server build step not required\"",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
+    "test:realtime": "node --test test/realtimeFaultIsolation.test.js",
     "migrate": "node-pg-migrate",
     "migrate:latest": "node-pg-migrate up",
     "migrate:rollback": "node-pg-migrate down",

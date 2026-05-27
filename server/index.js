@@ -199,17 +199,6 @@ export async function runWithFileLock(callback) {
   return await fileMutex.runExclusive(callback);
 }
 
-async function readContent() {
-  await ensureContentFile();
-  const raw = await fs.readFile(CONTENT_FILE, "utf8");
-  return JSON.parse(raw);
-}
-
-async function writeContent(content) {
-  await ensureContentFile();
-  await fs.writeFile(CONTENT_FILE, JSON.stringify(content, null, 2), "utf8");
-}
-
 let contentLock = Promise.resolve();
 
 function withContentLock(fn) {
@@ -237,10 +226,33 @@ export async function supabaseRequest(pathname, { method = "GET", body } = {}) {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Supabase error (${res.status}): ${text}`);
+    const error = new Error(`Supabase error (${res.status}): ${text}`);
+    error.status = res.status;
+    try {
+      error.body = JSON.parse(text);
+    } catch {
+      error.body = null;
+    }
+    throw error;
   }
   const text = await res.text();
   return text ? JSON.parse(text) : [];
+}
+
+export function isSupabaseDuplicateKeyError(err) {
+  if (!err) return false;
+  if (err.status === 409) return true;
+  if (err.body && err.body.code === "23505") return true;
+  const errMsg = String(err.message || "").toLowerCase();
+  if (
+    errMsg.includes("409") ||
+    errMsg.includes("23505") ||
+    errMsg.includes("duplicate key") ||
+    errMsg.includes("already exists")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function toSafeString(value, max = 4000) {
@@ -344,7 +356,7 @@ function sanitizeEventRecord(event) {
   return event;
 }
 
-async function createEventStore(event) {
+export async function createEventStore(event) {
   if (HAS_SUPABASE) {
     let payload = {
       id: event.id,
@@ -364,12 +376,17 @@ async function createEventStore(event) {
         body: [payload],
       });
     } catch (e) {
-      // Retry with suffix if id collision occurs.
-      payload = { ...payload, id: `${event.id}-${Date.now()}` };
-      [row] = await supabaseRequest("events", {
-        method: "POST",
-        body: [payload],
-      });
+      if (isSupabaseDuplicateKeyError(e)) {
+        // Retry with suffix only if verified id collision occurs
+        payload = { ...payload, id: `${event.id}-${Date.now()}` };
+        [row] = await supabaseRequest("events", {
+          method: "POST",
+          body: [payload],
+        });
+      } else {
+        // Do not retry on network failures, credential/auth errors, timeouts, or 429 rate limits
+        throw e;
+      }
     }
     return sanitizeEventRecord({
       id: row.id,

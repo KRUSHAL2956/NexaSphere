@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "node index.js",
     "build": "echo \"server build step not required\"",
-    "test": "jest --coverage",
-    "test:watch": "jest --watch",
+    "test": "node --test test/sanitize.test.js test/formSchemas.test.js test/adminSessions.test.js test/supabaseRetry.test.js",
+    "test:watch": "node --test --watch test/sanitize.test.js test/formSchemas.test.js test/adminSessions.test.js test/supabaseRetry.test.js",
     "migrate": "node-pg-migrate",
     "migrate:latest": "node-pg-migrate up",
     "migrate:rollback": "node-pg-migrate down",

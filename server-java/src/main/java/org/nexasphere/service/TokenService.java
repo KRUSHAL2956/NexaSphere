@@ -1,5 +1,7 @@
 package org.nexasphere.service;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,8 +28,9 @@ public class TokenService {
     public TokenSession createSession(String email) {
         Instant now = Instant.now();
         String token = generateToken();
-        SessionInfo sessionInfo = new SessionInfo(token, email, now, now.plus(SESSION_TTL));
-        sessions.put(token, sessionInfo);
+        String tokenHash = hashToken(token);
+        SessionInfo sessionInfo = new SessionInfo(tokenHash, email, now, now.plus(SESSION_TTL));
+        sessions.put(tokenHash, sessionInfo);
         return new TokenSession(token, sessionInfo);
     }
 
@@ -36,14 +39,15 @@ public class TokenService {
             return Optional.empty();
         }
 
+        String tokenHash = hashToken(token);
         Instant now = Instant.now();
-        SessionInfo info = sessions.get(token);
+        SessionInfo info = sessions.get(tokenHash);
         if (info == null) {
             return Optional.empty();
         }
 
         if (info.isExpired(now)) {
-            sessions.remove(token);
+            sessions.remove(tokenHash);
             return Optional.empty();
         }
 
@@ -54,7 +58,7 @@ public class TokenService {
         if (token == null || token.isBlank()) {
             return;
         }
-        sessions.remove(token);
+        sessions.remove(hashToken(token));
     }
 
     @Scheduled(fixedRate = 30 * 60 * 1000) // 30 minutes
@@ -74,6 +78,16 @@ public class TokenService {
             log.debug("Removed {} expired sessions", removed);
         }
         return removed;
+    }
+
+    private static String hashToken(String token) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(token.getBytes());
+            return toHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
     }
 
     private String generateToken() {

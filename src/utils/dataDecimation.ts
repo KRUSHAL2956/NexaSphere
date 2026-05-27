@@ -27,8 +27,8 @@ export function decimateData<T>(
 
   let a = 0; // Initially a is the first point in the triangle
   let maxAreaPoint = {} as T;
-  let maxArea = 0;
-  let area = 0;
+  let maxArea;
+  let area;
   let nextA = 0;
 
   sampled[sampledIndex++] = data[a]; // Always add the first point
@@ -59,13 +59,13 @@ export function decimateData<T>(
     const pointAX = Number(data[a][xKey]) || 0;
     const pointAY = Number(data[a][yKey]) || 0;
 
-    maxArea = area = -1;
+    maxArea = -1;
 
     for (; rangeOffs < rangeTo; rangeOffs++) {
       // Calculate triangle area over three buckets
       area =
         Math.abs(
-          (pointAX - avgX) * (Number(data[rangeOffs][yKey]) || 0 - pointAY) -
+          (pointAX - avgX) * ((Number(data[rangeOffs][yKey]) || 0) - pointAY) -
             (pointAX - (Number(data[rangeOffs][xKey]) || 0)) * (avgY - pointAY)
         ) * 0.5;
       if (area > maxArea) {
@@ -79,13 +79,13 @@ export function decimateData<T>(
     a = nextA; // This a is the next a (chosen b)
   }
 
-  sampled[sampledIndex++] = data[dataLength - 1]; // Always add last
+  sampled[sampledIndex] = data[dataLength - 1]; // Always add last
 
   return sampled;
 }
 
 /**
- * A simpler linear decimation to quickly reduce large datasets 
+ * A simpler linear decimation to quickly reduce large datasets
  * where LTTB might be too heavy or axes aren't strictly numeric.
  */
 export function linearDecimate<T>(data: T[], threshold: number): T[] {

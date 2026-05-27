@@ -71,4 +71,30 @@ export function sanitizeCoreTeamMemberRecord(member = {}) {
   };
 }
 
+export function toSafeString(value, max = 4000) {
+  return String(value ?? "")
+    .trim()
+    .slice(0, max);
+}
+
+export function normalizePhone(value) {
+  return String(value || "").replace(/[^\d]/g, "");
+}
+
+export function validateWhatsApp(str) {
+  const v = String(str || "").trim();
+  if (!/^\d{10}$/.test(v))
+    throw new Error("WhatsApp must be exactly 10 digits");
+  return v;
+}
+
+export function validateSection(str) {
+  const v = String(str || "")
+    .trim()
+    .toUpperCase();
+  if (!/^[A-Z]$/.test(v))
+    throw new Error("Section must be a single letter (A-Z)");
+  return v;
+}
+
 export { escapeHtml, sanitizeNullableText, sanitizeText, sanitizeTextArray };

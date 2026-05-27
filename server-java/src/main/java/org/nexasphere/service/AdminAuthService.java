@@ -1,5 +1,6 @@
 package org.nexasphere.service;
 
+import jakarta.annotation.PostConstruct;
 import org.nexasphere.event.AdminLoginEvent;
 import org.nexasphere.event.AdminLogoutEvent;
 import org.nexasphere.event.AdminEventPublisher;
@@ -7,6 +8,7 @@ import org.nexasphere.model.SessionInfo;
 import org.nexasphere.model.TokenSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -21,18 +23,25 @@ public class AdminAuthService {
     private String adminEmail;
 
     @Value("${ADMIN_PASSWORD}")
-    private String adminPassword;
+    private String adminPasswordHash;
 
     private final TokenService tokenService;
     private final AdminEventPublisher publisher;
+    private final PasswordEncoder passwordEncoder;
 
-    public AdminAuthService(TokenService tokenService, AdminEventPublisher publisher) {
+    public AdminAuthService(TokenService tokenService, AdminEventPublisher publisher, PasswordEncoder passwordEncoder) {
         this.tokenService = tokenService;
         this.publisher = publisher;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @PostConstruct
+    void init() {
+        this.adminPasswordHash = passwordEncoder.encode(adminPasswordHash);
     }
 
     public boolean isValidCredentials(String email, String password) {
-        return adminEmail.equals(email) && adminPassword.equals(password);
+        return adminEmail.equals(email) && passwordEncoder.matches(password, adminPasswordHash);
     }
 
     public TokenSession login(String email, String password) {

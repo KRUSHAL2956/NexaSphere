@@ -110,6 +110,7 @@ export default function PublicPortfolio({ username, onBack }) {
         <meta name="description" content={meta.description} />
         <meta name="keywords" content={meta.keywords} />
         <meta name="author" content={meta.author} />
+        <meta name="robots" content="index, follow" />
         
         <link rel="canonical" href={meta.url} />
         
@@ -119,6 +120,7 @@ export default function PublicPortfolio({ username, onBack }) {
         <meta property="og:image" content={meta.image} />
         <meta property="og:type" content={meta.type} />
         <meta property="og:url" content={meta.url} />
+        <meta property="og:site_name" content="NexaSphere" />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />

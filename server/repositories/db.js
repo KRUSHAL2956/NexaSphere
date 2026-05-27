@@ -10,7 +10,12 @@ function getPool() {
   return pool;
 }
 
+export let withDbOverride = null;
+
 export async function withDb(fn) {
+  if (withDbOverride) {
+    return await withDbOverride(fn);
+  }
   const p = getPool();
   if (!p) throw new Error('PostgreSQL not configured. Missing DATABASE_URL.');
   const client = await p.connect();
@@ -19,6 +24,10 @@ export async function withDb(fn) {
   } finally {
     client.release();
   }
+}
+
+export function setWithDbOverride(fn) {
+  withDbOverride = fn;
 }
 
 export { pg };

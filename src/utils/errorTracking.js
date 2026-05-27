@@ -97,7 +97,6 @@ export const setUserContext = (user) => {
  * @param {string} level - Level (info, warning, error)
  */
 export const addBreadcrumb = (message, category = "user-action", level = "info") => {
-  Sentry.captureMessage(message, level);
   Sentry.addBreadcrumb({
     message,
     category,

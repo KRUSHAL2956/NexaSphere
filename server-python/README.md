@@ -128,6 +128,10 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 # Server Configuration
 CORS_ORIGIN=http://localhost:5173,https://nexasphere-glbajaj.vercel.app
 DEBUG=True
+
+# Certificate Management (required)
+# Set a strong random value — without this the server will refuse to start
+ADMIN_SECRET=your-strong-random-secret
 ```
 
 <br/>
@@ -577,6 +581,7 @@ SUPABASE_URL=https://prod-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=production-key
 CORS_ORIGIN=https://nexasphere-glbajaj.vercel.app
 DEBUG=False
+ADMIN_SECRET=your-production-admin-secret
 ```
 
 <br/>

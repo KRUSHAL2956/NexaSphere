@@ -11,6 +11,7 @@ Routes:
 import io
 import os
 import uuid
+import hmac
 import hashlib
 import logging
 from datetime import datetime, timezone
@@ -34,12 +35,17 @@ _CERTIFICATE_STORE: dict[str, dict] = {}
 # Admin auth helper — simple shared-secret check matching existing project
 # pattern. Replace with JWT / session-based auth when available.
 # ---------------------------------------------------------------------------
-ADMIN_SECRET = os.getenv("ADMIN_SECRET", "nexasphere-admin-secret")
+ADMIN_SECRET = os.getenv("ADMIN_SECRET")
+if not ADMIN_SECRET:
+    raise RuntimeError(
+        "ADMIN_SECRET environment variable is required for certificate management. "
+        "Set it in your .env file or environment before starting the server."
+    )
 
 
 def _require_admin(x_admin_secret: Optional[str] = Header(default=None)) -> None:
     """Dependency that enforces admin authentication via X-Admin-Secret header."""
-    if x_admin_secret != ADMIN_SECRET:
+    if not hmac.compare_digest(x_admin_secret or "", ADMIN_SECRET):
         raise HTTPException(status_code=401, detail="Unauthorized: invalid admin secret")
 
 
@@ -94,7 +100,7 @@ class VerifyResponse(BaseModel):
 
 def _make_certificate_id(student_id: str, event_id: str) -> str:
     """Deterministic, collision-resistant certificate ID based on student+event."""
-    seed = f"{student_id}:{event_id}:{ADMIN_SECRET}"
+    seed = f"{student_id}:{event_id}"
     digest = hashlib.sha256(seed.encode()).hexdigest()[:16]
     return f"NS-CERT-{digest.upper()}"
 

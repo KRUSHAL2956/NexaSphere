@@ -22,6 +22,30 @@ function hashToken(token) {
   return crypto.createHash('sha256').update(String(token)).digest('hex');
 }
 
+let lastCleanupTime = 0;
+
+/**
+ * Execute a throttled, lazy database cleanup of expired and revoked sessions.
+ * In serverless environments, this guarantees that sessions are regularly swept.
+ * @param {boolean} forceAwait - If true, blocks request execution until the delete query completes.
+ */
+export async function triggerLazyCleanup(forceAwait = false) {
+  const now = Date.now();
+  const interval = getCleanupIntervalMs();
+  if (now - lastCleanupTime < interval) {
+    return;
+  }
+  lastCleanupTime = now;
+
+  const promise = cleanupExpiredAdminSessions().catch((error) => {
+    console.error('[Admin Session Cleanup] Lazy cleanup failed', error);
+  });
+
+  if (forceAwait) {
+    await promise;
+  }
+}
+
 async function ensureSchema(client) {
   await client.query(`
     create table if not exists admin_sessions (
@@ -51,6 +75,9 @@ async function ensureReady() {
 
 export async function createAdminSession({ username, metadata = {} }) {
   await ensureReady();
+  
+  // Force await cleanup on new sessions to guarantee cleanup under serverless starts
+  await triggerLazyCleanup(true);
 
   const token = crypto.randomBytes(32).toString('hex');
   const tokenHash = hashToken(token);
@@ -83,6 +110,9 @@ export async function createAdminSession({ username, metadata = {} }) {
 export async function getAdminSession(token) {
   if (!token) return null;
   await ensureReady();
+
+  // Run non-blocking background lazy cleanup on regular authentications
+  triggerLazyCleanup(false);
 
   const tokenHash = hashToken(token);
   return withDb(async (client) => {
@@ -118,6 +148,9 @@ export async function revokeAdminSession(token) {
   if (!token) return false;
   await ensureReady();
 
+  // Force await cleanup on sign-outs since they are infrequent and state-changing
+  await triggerLazyCleanup(true);
+
   const tokenHash = hashToken(token);
   return withDb(async (client) => {
     const { rowCount } = await client.query(
@@ -141,6 +174,20 @@ export async function cleanupExpiredAdminSessions() {
 
 export function startAdminSessionCleanup() {
   if (cleanupTimer) return cleanupTimer;
+
+  // Prevent background interval leaks and runtime warnings in serverless functions
+  const isServerless = !!(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT ||
+    process.env.NETLIFY ||
+    process.env.FUNCTIONS_SIGNATURE
+  );
+
+  if (isServerless) {
+    console.log('[Admin Session Cleanup] Serverless environment detected. Skipping background interval timer.');
+    return null;
+  }
 
   const intervalMs = getCleanupIntervalMs();
   cleanupTimer = setInterval(() => {

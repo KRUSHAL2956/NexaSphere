@@ -1,7 +1,4 @@
-/**
- * Workspace Service - Manage workspaces/projects for organizing prompts
- * Handles: create, rename, delete, list workspaces
- */
+import logger from './logger';
 
 const WORKSPACES_KEY = 'nexasphere_workspaces';
 
@@ -49,7 +46,7 @@ export const getWorkspaces = () => {
     const stored = localStorage.getItem(WORKSPACES_KEY);
     return stored ? JSON.parse(stored) : initializeWorkspaces();
   } catch (error) {
-    console.error('Error retrieving workspaces:', error);
+    logger.error('Error retrieving workspaces:', error);
     return initializeWorkspaces();
   }
 };
@@ -74,7 +71,7 @@ export const createWorkspace = (name, color = '#6366f1') => {
     localStorage.setItem(WORKSPACES_KEY, JSON.stringify(workspaces));
     return newWorkspace;
   } catch (error) {
-    console.error('Error creating workspace:', error);
+    logger.error('Error creating workspace:', error);
     return null;
   }
 };
@@ -94,7 +91,7 @@ export const updateWorkspace = (id, updates) => {
     }
     return null;
   } catch (error) {
-    console.error('Error updating workspace:', error);
+    logger.error('Error updating workspace:', error);
     return null;
   }
 };
@@ -104,7 +101,7 @@ export const updateWorkspace = (id, updates) => {
  */
 export const deleteWorkspace = (id) => {
   if (id === 'default') {
-    console.warn('Cannot delete default workspace');
+    logger.warn('Cannot delete default workspace');
     return false;
   }
 
@@ -113,7 +110,7 @@ export const deleteWorkspace = (id) => {
     localStorage.setItem(WORKSPACES_KEY, JSON.stringify(workspaces));
     return true;
   } catch (error) {
-    console.error('Error deleting workspace:', error);
+    logger.error('Error deleting workspace:', error);
     return false;
   }
 };

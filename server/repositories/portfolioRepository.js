@@ -3,10 +3,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { withDb } from './db.js';
+import { Mutex } from 'async-mutex';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORTFOLIOS_FILE = path.join(__dirname, '..', 'data', 'portfolios.json');
+const portfolioMutex = new Mutex();
 
 const BCRYPT_ROUNDS = 12;
 
@@ -278,47 +280,50 @@ export const portfolioRepository = {
     }
 
     // Local file fallback
-    const portfolios = await readLocalPortfolios();
-    const now = new Date().toISOString();
-    const existing = portfolios[sanitizedUsername] || { createdAt: now };
+    return await portfolioMutex.runExclusive(async () => {
+      const portfolios = await readLocalPortfolios();
+      const now = new Date().toISOString();
+      const existing = portfolios[sanitizedUsername] || { createdAt: now };
 
-    const updatedPortfolio = {
-      username: sanitizedUsername,
-      passkeyHash,
-      theme,
-      visibleSections,
-      socialLinks,
-      customDomain,
-      seoMetadata,
-      skills,
-      badges,
-      projects,
-      roadmaps,
-      bio,
-      title,
-      createdAt: existing.createdAt,
-      updatedAt: now,
-    };
 
-    portfolios[sanitizedUsername] = updatedPortfolio;
-    await writeLocalPortfolios(portfolios);
+       const updatedPortfolio = {
+        username,
+        passkeyHash,
+        theme,
+        visibleSections,
+        socialLinks,
+        customDomain,
+        seoMetadata,
+        skills,
+        badges,
+        projects,
+        roadmaps,
+        bio,
+        title,
+        createdAt: existing.createdAt,
+        updatedAt: now,
+      };
+      portfolios[sanitizedUsername] = updatedPortfolio;
+      await writeLocalPortfolios(portfolios);
 
-    return {
-      username: updatedPortfolio.username,
-      theme: updatedPortfolio.theme,
-      visibleSections: updatedPortfolio.visibleSections,
-      socialLinks: updatedPortfolio.socialLinks,
-      customDomain: updatedPortfolio.customDomain,
-      seoMetadata: updatedPortfolio.seoMetadata,
-      skills: updatedPortfolio.skills,
-      badges: updatedPortfolio.badges,
-      projects: updatedPortfolio.projects,
-      roadmaps: updatedPortfolio.roadmaps,
-      bio: updatedPortfolio.bio,
-      title: updatedPortfolio.title,
-      createdAt: updatedPortfolio.createdAt,
-      updatedAt: updatedPortfolio.updatedAt,
-    };
+      return {
+        username: updatedPortfolio.username,
+        theme: updatedPortfolio.theme,
+        visibleSections: updatedPortfolio.visibleSections,
+        socialLinks: updatedPortfolio.socialLinks,
+        customDomain: updatedPortfolio.customDomain,
+        seoMetadata: updatedPortfolio.seoMetadata,
+        skills: updatedPortfolio.skills,
+        badges: updatedPortfolio.badges,
+        projects: updatedPortfolio.projects,
+        roadmaps: updatedPortfolio.roadmaps,
+        bio: updatedPortfolio.bio,
+        title: updatedPortfolio.title,
+        createdAt: updatedPortfolio.createdAt,
+        updatedAt: updatedPortfolio.updatedAt,
+      };
+
+    });
   }
 };
 

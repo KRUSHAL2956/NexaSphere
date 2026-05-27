@@ -3,6 +3,8 @@
  * Handles: save, load, search, delete, and workspace organization of prompts
  */
 
+import logger from './logger';
+
 const DB_NAME = 'NexaSphereDB';
 const STORE_NAME = 'prompts';
 const DB_VERSION = 1;
@@ -65,7 +67,7 @@ export const savePrompt = async (prompt, response, workspace = 'default') => {
       request.onsuccess = () => resolve(request.result);
     });
   } catch (error) {
-    console.error('Error saving prompt to IndexedDB:', error);
+    logger.error('Error saving prompt to IndexedDB:', error);
     // Fallback to localStorage
     savePromptToLocalStorage(prompt, response, workspace);
   }
@@ -97,7 +99,7 @@ export const getAllPrompts = async (workspace = null) => {
       };
     });
   } catch (error) {
-    console.error('Error retrieving prompts from IndexedDB:', error);
+    logger.error('Error retrieving prompts from IndexedDB:', error);
     return getPromptsFromLocalStorage(workspace);
   }
 };
@@ -116,7 +118,7 @@ export const searchPrompts = async (keyword, workspace = null) => {
         p.botResponse.toLowerCase().includes(lowerKeyword)
     );
   } catch (error) {
-    console.error('Error searching prompts:', error);
+    logger.error('Error searching prompts:', error);
     return [];
   }
 };
@@ -144,7 +146,7 @@ export const getPinnedPrompts = async (workspace = null) => {
       };
     });
   } catch (error) {
-    console.error('Error retrieving pinned prompts:', error);
+    logger.error('Error retrieving pinned prompts:', error);
     return [];
   }
 };
@@ -175,7 +177,7 @@ export const togglePinPrompt = async (id, pinned) => {
       getRequest.onerror = () => reject(getRequest.error);
     });
   } catch (error) {
-    console.error('Error toggling pin status:', error);
+    logger.error('Error toggling pin status:', error);
   }
 };
 
@@ -195,7 +197,7 @@ export const deletePrompt = async (id) => {
       request.onsuccess = () => resolve(true);
     });
   } catch (error) {
-    console.error('Error deleting prompt:', error);
+    logger.error('Error deleting prompt:', error);
   }
 };
 
@@ -212,7 +214,7 @@ export const clearWorkspace = async (workspace = 'default') => {
     }
     return true;
   } catch (error) {
-    console.error('Error clearing workspace:', error);
+    logger.error('Error clearing workspace:', error);
   }
 };
 
@@ -224,7 +226,7 @@ export const getRecentPrompts = async (limit = 10, workspace = null) => {
     const allPrompts = await getAllPrompts(workspace);
     return allPrompts.slice(0, limit);
   } catch (error) {
-    console.error('Error retrieving recent prompts:', error);
+    logger.error('Error retrieving recent prompts:', error);
     return [];
   }
 };
@@ -246,7 +248,7 @@ const savePromptToLocalStorage = (prompt, response, workspace = 'default') => {
     });
     localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(stored));
   } catch (error) {
-    console.error('Error saving to localStorage:', error);
+    logger.error('Error saving to localStorage:', error);
   }
 };
 
@@ -258,7 +260,7 @@ const getPromptsFromLocalStorage = (workspace = null) => {
     }
     return stored.sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
-    console.error('Error retrieving from localStorage:', error);
+    logger.error('Error retrieving from localStorage:', error);
     return [];
   }
 };

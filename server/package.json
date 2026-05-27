@@ -8,6 +8,7 @@
     "build": "echo \"server build step not required\"",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
+    "test:membership": "node --test test/membershipProxy.test.js",
     "migrate": "node-pg-migrate",
     "migrate:latest": "node-pg-migrate up",
     "migrate:rollback": "node-pg-migrate down",

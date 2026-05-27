@@ -186,17 +186,6 @@ export async function runWithFileLock(callback) {
   return await fileMutex.runExclusive(callback);
 }
 
-async function readContent() {
-  await ensureContentFile();
-  const raw = await fs.readFile(CONTENT_FILE, "utf8");
-  return JSON.parse(raw);
-}
-
-async function writeContent(content) {
-  await ensureContentFile();
-  await fs.writeFile(CONTENT_FILE, JSON.stringify(content, null, 2), "utf8");
-}
-
 let contentLock = Promise.resolve();
 
 function withContentLock(fn) {
@@ -1063,6 +1052,38 @@ app.delete("/api/admin/core-team/:id", adminAuth, async (req, res) => {
   }
 });
 
+let membershipCache = null;
+let membershipCacheTime = 0;
+let inFlightMembershipFetch = null;
+
+async function fetchMembershipData(scriptUrl, secret, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getResponses", token: secret }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google Apps Script returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    const responses = data.responses || [];
+
+    membershipCache = responses;
+    membershipCacheTime = Date.now();
+
+    return responses;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 app.get("/api/admin/membership", adminAuth, async (req, res) => {
   const scriptUrl = process.env.MEMBERSHIP_SCRIPT_URL;
   const secret = process.env.MEMBERSHIP_SECRET;
@@ -1071,21 +1092,43 @@ app.get("/api/admin/membership", adminAuth, async (req, res) => {
     return res.json({ responses: [] });
   }
 
-  try {
-    const response = await fetch(scriptUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getResponses", token: secret }),
-    });
+  const cacheTtl = Number(process.env.MEMBERSHIP_CACHE_TTL_MS) || 30000;
+  const timeoutMs = Number(process.env.MEMBERSHIP_TIMEOUT_MS) || 5000;
+  const now = Date.now();
 
-    if (!response.ok) {
-      throw new Error(`Google Apps Script returned ${response.status}`);
+  // 1. Return fresh cache if within TTL
+  if (membershipCache && now - membershipCacheTime < cacheTtl) {
+    res.setHeader("X-Cache", "HIT");
+    return res.json({ responses: membershipCache });
+  }
+
+  try {
+    let data;
+
+    // 2. Request Deduplication: collapse concurrent fetches
+    if (inFlightMembershipFetch) {
+      res.setHeader("X-Cache", "COLLAPSED");
+      data = await inFlightMembershipFetch;
+    } else {
+      res.setHeader("X-Cache", "MISS");
+      inFlightMembershipFetch = fetchMembershipData(scriptUrl, secret, timeoutMs);
+      try {
+        data = await inFlightMembershipFetch;
+      } finally {
+        inFlightMembershipFetch = null;
+      }
     }
 
-    const data = await response.json();
-    return res.json({ responses: data.responses || [] });
+    return res.json({ responses: data });
   } catch (err) {
     console.error("[Membership] Failed to fetch responses:", err.message);
+
+    // 3. Stale Fallback: return stale cache if external request fails or times out
+    if (membershipCache) {
+      res.setHeader("X-Cache", "STALE");
+      return res.json({ responses: membershipCache });
+    }
+
     return res
       .status(500)
       .json({ error: "Failed to fetch membership responses" });
@@ -1421,22 +1464,37 @@ process.on("uncaughtException", (err) => {
 });
 
 const port = Number(process.env.PORT || 8787);
-if (!process.env.VERCEL) {
-  const boot = HAS_SUPABASE ? Promise.resolve() : ensureContentFile();
-  boot.then(() => {
+if (process.env.NODE_ENV !== "test") {
+  if (!process.env.VERCEL) {
+    const boot = HAS_SUPABASE ? Promise.resolve() : ensureContentFile();
+    boot.then(() => {
+      const server = app.listen(port, () => {
+        // eslint-disable-next-line no-console
+        console.log(`NexaSphere server listening on http://localhost:${port}`);
+      });
+      initializeSocketIO(server);
+    });
+  } else {
+    // Vercel/Render style deployments rely on the platform to start the server.
     const server = app.listen(port, () => {
       // eslint-disable-next-line no-console
       console.log(`NexaSphere server listening on http://localhost:${port}`);
     });
     initializeSocketIO(server);
-  });
-} else {
-  // Vercel/Render style deployments rely on the platform to start the server.
-  const server = app.listen(port, () => {
-    // eslint-disable-next-line no-console
-    console.log(`NexaSphere server listening on http://localhost:${port}`);
-  });
-  initializeSocketIO(server);
+  }
+}
+
+export function _getMembershipCache() {
+  return membershipCache;
+}
+export function _setMembershipCache(cache, time = Date.now()) {
+  membershipCache = cache;
+  membershipCacheTime = time;
+}
+export function _clearMembershipCache() {
+  membershipCache = null;
+  membershipCacheTime = 0;
+  inFlightMembershipFetch = null;
 }
 
 export default app;

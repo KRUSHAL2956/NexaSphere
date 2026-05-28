@@ -4,8 +4,66 @@
  */
 
 import logger from '../utils/logger.js';
+import { getAdminSession } from '../repositories/adminSessionsRepository.js';
 
 const adminClients = new Set();
+const SSE_VALIDATION_INTERVAL_MS = 5000;
+let sseValidationTimer = null;
+
+/**
+ * Start periodic verification of active SSE clients against the database
+ */
+export function startSSEValidation() {
+  if (sseValidationTimer) return sseValidationTimer;
+
+  sseValidationTimer = setInterval(async () => {
+    const clients = Array.from(adminClients);
+    for (const client of clients) {
+      const token = client.adminSessionToken;
+      if (!token) {
+        logger.warn('SSE client missing token, force terminating');
+        client.end();
+        adminClients.delete(client);
+        if (client._heartbeat) clearInterval(client._heartbeat);
+        continue;
+      }
+      try {
+        const session = await getAdminSession(token);
+        if (!session) {
+          logger.warn('Revoked or expired admin SSE session detected. Force terminating connection.', { token: token.slice(0, 8) });
+          try {
+            client.write(`event: admin:revoked\ndata: ${JSON.stringify({ error: 'Session has been revoked or expired' })}\n\n`);
+          } catch (e) {
+            // Client might already be closed
+          }
+          client.end();
+          adminClients.delete(client);
+          if (client._heartbeat) clearInterval(client._heartbeat);
+        }
+      } catch (error) {
+        logger.error('Failed to validate active SSE client session', { error: error.message });
+      }
+    }
+  }, SSE_VALIDATION_INTERVAL_MS);
+
+  if (sseValidationTimer && typeof sseValidationTimer.unref === 'function') {
+    sseValidationTimer.unref();
+  }
+  return sseValidationTimer;
+}
+
+/**
+ * Stop periodic verification of active SSE clients
+ */
+export function stopSSEValidation() {
+  if (sseValidationTimer) {
+    clearInterval(sseValidationTimer);
+    sseValidationTimer = null;
+  }
+}
+
+// Start validation automatically at the module level
+startSSEValidation();
 
 /**
  * Add SSE client
@@ -98,4 +156,6 @@ export default {
   broadcastSSEEvent,
   getConnectedSSEClientsCount,
   setupSSEHeaders,
+  startSSEValidation,
+  stopSSEValidation,
 };

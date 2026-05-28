@@ -24,6 +24,57 @@ const joinRoomAttempts = new Map();
 const MAX_JOIN_ROOM_ATTEMPTS = 20;
 const JOIN_ROOM_WINDOW_MS = 60000;
 
+let socketValidationTimer = null;
+
+/**
+ * Start periodic verification of active admin sockets against the database
+ */
+export function startSocketValidation() {
+  if (socketValidationTimer) return socketValidationTimer;
+
+  const ADMIN_SESSION_VALIDATION_INTERVAL_MS = 5000;
+  socketValidationTimer = setInterval(async () => {
+    if (!io) return;
+    try {
+      const activeSockets = io.sockets?.sockets;
+      if (!activeSockets) return;
+
+      for (const [id, s] of activeSockets.entries()) {
+        if (s.adminAuthenticated && s.adminSessionToken) {
+          const session = await getAdminSession(s.adminSessionToken);
+          if (!session) {
+            logger.warn('Distributed admin session revocation detected. Force disconnecting socket.', { socketId: s.id });
+            try {
+              s.emit('admin:revoked', { error: 'Session has been revoked or expired' });
+            } catch (e) {
+              // Socket might already be closed
+            }
+            s.disconnect(true);
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to validate active admin socket sessions', { error: error.message });
+    }
+  }, ADMIN_SESSION_VALIDATION_INTERVAL_MS);
+
+  if (socketValidationTimer && typeof socketValidationTimer.unref === 'function') {
+    socketValidationTimer.unref();
+  }
+  return socketValidationTimer;
+}
+
+/**
+ * Stop periodic verification of active admin sockets
+ */
+export function stopSocketValidation() {
+  if (socketValidationTimer) {
+    clearInterval(socketValidationTimer);
+    socketValidationTimer = null;
+  }
+}
+
+
 /**
  * Parse Bearer token from auth header
  */
@@ -56,6 +107,7 @@ export function initializeSocketIO(httpServer) {
         const session = await getAdminSession(token);
         if (session) {
           socket.adminSession = session;
+          socket.adminSessionToken = token;
           socket.adminAuthenticated = true;
         }
       } catch {
@@ -68,6 +120,9 @@ export function initializeSocketIO(httpServer) {
   io.on('connection', (socket) => {
     _onConnection(socket);
   });
+
+  // Start distributed revocation checks for admin WebSocket clients
+  startSocketValidation();
 
   return io;
 }
@@ -272,6 +327,7 @@ export function _onConnection(socket) {
         return socket.emit('admin:authenticated', { success: false, error: 'Invalid or expired token' });
       }
       socket.adminSession = session;
+      socket.adminSessionToken = token;
       socket.adminAuthenticated = true;
       socket.join('admin-room');
       logger.info('Admin authenticated via socket event', { socketId: socket.id, username: session.username });
@@ -391,4 +447,4 @@ function _cleanupWorkspaceMembership(socketId) {
   }
 }
 
-export default { initializeSocketIO, getIO, broadcastEvent, emitToRoom, emitToUser, _clearConnectedUsers, _clearWorkspaceRoomMembers, _clearJoinRoomAttempts, _onConnection };
+export default { initializeSocketIO, getIO, broadcastEvent, emitToRoom, emitToUser, _clearConnectedUsers, _clearWorkspaceRoomMembers, _clearJoinRoomAttempts, _onConnection, startSocketValidation, stopSocketValidation };

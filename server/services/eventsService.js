@@ -1,5 +1,5 @@
-import { eventsRepository } from '../repositories/eventsRepository.js';
-import { eventSchema } from '../validators/eventSchemas.js';
+import { eventsRepository } from "../repositories/eventsRepository.js";
+import { eventSchema, eventPatchSchema } from "../validators/eventSchemas.js";
 
 export const eventsService = {
   async listEvents({ page = 1, limit = 20 } = {}) {
@@ -12,7 +12,7 @@ export const eventsService = {
   },
 
   async updateEvent(id, input) {
-    const patch = eventSchema.partial().parse({ ...input, id });
+    const patch = eventPatchSchema.parse({ ...input, id });
     return eventsRepository.update(id, patch);
   },
 

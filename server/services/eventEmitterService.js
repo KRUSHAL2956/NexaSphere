@@ -3,17 +3,77 @@
  * Manages real-time events for registration, waitlist, reminders, attendance
  */
 
-import EventEmitter from 'events';
-import logger from '../utils/logger.js';
-import { emitToRoom, getRoom } from '../config/socket.js';
-import notificationsService from './notificationsService.js';
+import EventEmitter from "events";
+import logger from "../utils/logger.js";
+import { emitToRoom, getRoom } from "../config/socket.js";
+import notificationsService from "./notificationsService.js";
+import { sendEmail } from "./emailService.js";
 import {
-  sendRegistrationConfirmationEmail,
-  sendWaitlistPromotionEmail,
-  sendEventReminderEmail,
-  sendAttendanceConfirmationEmail,
-} from './emailService.js';
-import { sendPushNotification, sendToTopic } from './pushNotificationService.js';
+  sendPushNotification,
+  sendToTopic,
+} from "./pushNotificationService.js";
+
+// Wrappers/fallbacks for the missing event-specific email functions
+async function sendRegistrationConfirmationEmail(to, data) {
+  return sendEmail({
+    to,
+    subject: `Registration Confirmed: ${data.eventName}`,
+    templateName: "rsvp-confirmation",
+    data: {
+      name: data.name,
+      eventName: data.eventName,
+      eventDate: data.eventDate,
+      eventLocation: data.eventLocation || "Online",
+      eventTime: data.eventTime || "TBA",
+    },
+  });
+}
+
+async function sendWaitlistPromotionEmail(to, data) {
+  return sendEmail({
+    to,
+    subject: `🎉 Waitlist Promotion: ${data.eventName}`,
+    templateName: "rsvp-confirmation",
+    data: {
+      name: data.name,
+      eventName: data.eventName,
+      eventDate: data.eventDate,
+      eventLocation: data.eventLocation || "Online",
+      eventTime: data.eventTime || "TBA",
+    },
+  });
+}
+
+async function sendEventReminderEmail(to, data) {
+  return sendEmail({
+    to,
+    subject: `⏰ Reminder: ${data.eventName}`,
+    templateName: "rsvp-confirmation",
+    data: {
+      name: data.name,
+      eventName: data.eventName,
+      eventDate: data.eventDate,
+      eventLocation: data.eventLocation || "Online",
+      eventTime: data.eventTime || "TBA",
+    },
+  });
+}
+
+async function sendAttendanceConfirmationEmail(to, data) {
+  return sendEmail({
+    to,
+    subject: `Attendance Marked: ${data.eventName}`,
+    templateName: "rsvp-confirmation",
+    data: {
+      name: data.name,
+      eventName: data.eventName,
+      eventDate: data.eventDate,
+      eventLocation: data.eventLocation || "Online",
+      eventTime: data.eventTime || "TBA",
+      points: data.points,
+    },
+  });
+}
 
 class RealTimeEventManager extends EventEmitter {
   constructor() {
@@ -23,16 +83,19 @@ class RealTimeEventManager extends EventEmitter {
 
   setupEventListeners() {
     // Registration confirmed event
-    this.on('registration-confirmed', this.handleRegistrationConfirmed.bind(this));
+    this.on(
+      "registration-confirmed",
+      this.handleRegistrationConfirmed.bind(this)
+    );
 
     // Waitlist promotion event
-    this.on('waitlist-promotion', this.handleWaitlistPromotion.bind(this));
+    this.on("waitlist-promotion", this.handleWaitlistPromotion.bind(this));
 
     // Event reminder event
-    this.on('event-reminder', this.handleEventReminder.bind(this));
+    this.on("event-reminder", this.handleEventReminder.bind(this));
 
     // Attendance marked event
-    this.on('attendance-marked', this.handleAttendanceMarked.bind(this));
+    this.on("attendance-marked", this.handleAttendanceMarked.bind(this));
   }
 
   /**
@@ -40,7 +103,21 @@ class RealTimeEventManager extends EventEmitter {
    */
   async handleRegistrationConfirmed(data) {
     try {
-      logger.info('Event: Registration confirmed', { userId: data.userId, eventId: data.eventId });
+      logger.info("Event: Registration confirmed", {
+        userId: data.userId,
+        eventId: data.eventId,
+      });
+
+      // 1. Durable persistence first. If this fails, we do NOT emit realtime updates.
+      const note = await notificationsService.addNotification(
+        data.userId || "global",
+        {
+          type: "connection",
+          title: "Registration Confirmed",
+          message: `You're registered for ${data.eventName}`,
+          link: `/events/${data.eventId}`,
+        }
+      );
 
       // Send email
       await sendRegistrationConfirmationEmail(data.userEmail, {
@@ -54,43 +131,36 @@ class RealTimeEventManager extends EventEmitter {
       // Send push notification
       if (data.pushToken) {
         await sendPushNotification(data.pushToken, {
-          title: 'Registration Confirmed',
+          title: "Registration Confirmed",
           body: `You're registered for ${data.eventName}`,
           data: {
             eventId: data.eventId,
-            type: 'registration',
+            type: "registration",
           },
           link: `/events/${data.eventId}`,
         });
       }
 
-      // Broadcast to notifications room
-      emitToRoom(getRoom('notifications'), 'registration-confirmed', {
+      // Broadcast to notifications room ONLY after successful persistence
+      emitToRoom(getRoom("notifications"), "registration-confirmed", {
         userId: data.userId,
         eventId: data.eventId,
         eventName: data.eventName,
+        notificationId: note.id,
         timestamp: new Date(),
       });
 
-      // Persist notification (store per-user if userId provided)
-      try {
-        notificationsService.addNotification(data.userId || 'global', {
-          type: 'connection',
-          title: 'Registration Confirmed',
-          message: `You're registered for ${data.eventName}`,
-          link: `/events/${data.eventId}`,
-        });
-      } catch (err) { logger.warn('Failed to persist notification', { err: err.message }); }
-
       // Notify admin
-      emitToRoom(getRoom('admin'), 'admin:new-registration', {
+      emitToRoom(getRoom("admin"), "admin:new-registration", {
         userId: data.userId,
         userName: data.userName,
         eventName: data.eventName,
         timestamp: new Date(),
       });
     } catch (error) {
-      logger.error('Error handling registration event', { error: error.message });
+      logger.error("Error handling registration event", {
+        error: error.message,
+      });
     }
   }
 
@@ -99,7 +169,21 @@ class RealTimeEventManager extends EventEmitter {
    */
   async handleWaitlistPromotion(data) {
     try {
-      logger.info('Event: Waitlist promotion', { userId: data.userId, eventId: data.eventId });
+      logger.info("Event: Waitlist promotion", {
+        userId: data.userId,
+        eventId: data.eventId,
+      });
+
+      // 1. Durable persistence first. If this fails, we do NOT emit realtime updates.
+      const note = await notificationsService.addNotification(
+        data.userId || "global",
+        {
+          type: "mention",
+          title: "Waitlist Promotion",
+          message: `You've been promoted for ${data.eventName}`,
+          link: `/events/${data.eventId}`,
+        }
+      );
 
       // Send email
       await sendWaitlistPromotionEmail(data.userEmail, {
@@ -114,43 +198,36 @@ class RealTimeEventManager extends EventEmitter {
       // Send push notification
       if (data.pushToken) {
         await sendPushNotification(data.pushToken, {
-          title: '🎉 Waitlist Promotion',
+          title: "🎉 Waitlist Promotion",
           body: `You've been promoted for ${data.eventName}!`,
           data: {
             eventId: data.eventId,
-            type: 'promotion',
+            type: "promotion",
           },
           link: `/events/${data.eventId}`,
-          tag: 'promotion',
+          tag: "promotion",
         });
       }
 
-      // Broadcast event
-      emitToRoom(getRoom('notifications'), 'waitlist-promotion', {
+      // Broadcast event ONLY after successful persistence
+      emitToRoom(getRoom("notifications"), "waitlist-promotion", {
         userId: data.userId,
         eventId: data.eventId,
+        notificationId: note.id,
         timestamp: new Date(),
       });
 
-      // Persist notification
-      try {
-        notificationsService.addNotification(data.userId || 'global', {
-          type: 'mention',
-          title: 'Waitlist Promotion',
-          message: `You've been promoted for ${data.eventName}`,
-          link: `/events/${data.eventId}`,
-        });
-      } catch (err) { logger.warn('Failed to persist notification', { err: err.message }); }
-
       // Notify admin
-      emitToRoom(getRoom('admin'), 'admin:waitlist-promotion', {
+      emitToRoom(getRoom("admin"), "admin:waitlist-promotion", {
         userId: data.userId,
         userName: data.userName,
         eventName: data.eventName,
         timestamp: new Date(),
       });
     } catch (error) {
-      logger.error('Error handling waitlist promotion', { error: error.message });
+      logger.error("Error handling waitlist promotion", {
+        error: error.message,
+      });
     }
   }
 
@@ -159,7 +236,21 @@ class RealTimeEventManager extends EventEmitter {
    */
   async handleEventReminder(data) {
     try {
-      logger.info('Event: Reminder sent', { userId: data.userId, eventId: data.eventId });
+      logger.info("Event: Reminder sent", {
+        userId: data.userId,
+        eventId: data.eventId,
+      });
+
+      // 1. Durable persistence first. If this fails, we do NOT emit realtime updates.
+      const note = await notificationsService.addNotification(
+        data.userId || "global",
+        {
+          type: "system",
+          title: `Reminder: ${data.eventName}`,
+          message: `${data.eventName} is starting soon`,
+          link: `/events/${data.eventId}`,
+        }
+      );
 
       // Send email
       await sendEventReminderEmail(data.userEmail, {
@@ -168,7 +259,7 @@ class RealTimeEventManager extends EventEmitter {
         eventDate: data.eventDate,
         eventTime: data.eventTime,
         eventLocation: data.eventLocation,
-        timeUntilEvent: data.timeUntilEvent || 'soon',
+        timeUntilEvent: data.timeUntilEvent || "soon",
         eventLink: `/events/${data.eventId}`,
       });
 
@@ -179,32 +270,23 @@ class RealTimeEventManager extends EventEmitter {
           body: `Don't forget: ${data.eventName} on ${data.eventDate}`,
           data: {
             eventId: data.eventId,
-            type: 'reminder',
+            type: "reminder",
           },
           link: `/events/${data.eventId}`,
-          tag: 'reminder',
+          tag: "reminder",
         });
       }
 
-      // Notify user via WebSocket
-      emitToRoom(getRoom('notifications'), 'event-reminder', {
+      // Notify user via WebSocket ONLY after successful persistence
+      emitToRoom(getRoom("notifications"), "event-reminder", {
         userId: data.userId,
         eventId: data.eventId,
         eventName: data.eventName,
+        notificationId: note.id,
         timestamp: new Date(),
       });
-
-      // Persist notification
-      try {
-        notificationsService.addNotification(data.userId || 'global', {
-          type: 'system',
-          title: `Reminder: ${data.eventName}`,
-          message: `${data.eventName} is starting soon`,
-          link: `/events/${data.eventId}`,
-        });
-      } catch (err) { logger.warn('Failed to persist notification', { err: err.message }); }
     } catch (error) {
-      logger.error('Error handling event reminder', { error: error.message });
+      logger.error("Error handling event reminder", { error: error.message });
     }
   }
 
@@ -213,7 +295,21 @@ class RealTimeEventManager extends EventEmitter {
    */
   async handleAttendanceMarked(data) {
     try {
-      logger.info('Event: Attendance marked', { userId: data.userId, eventId: data.eventId });
+      logger.info("Event: Attendance marked", {
+        userId: data.userId,
+        eventId: data.eventId,
+      });
+
+      // 1. Durable persistence first. If this fails, we do NOT emit realtime updates.
+      const note = await notificationsService.addNotification(
+        data.userId || "global",
+        {
+          type: "system",
+          title: "Attendance Marked",
+          message: `Attendance for ${data.eventName} recorded. You earned ${data.points || 0} points.`,
+          link: `/events/${data.eventId}`,
+        }
+      );
 
       // Send email
       await sendAttendanceConfirmationEmail(data.userEmail, {
@@ -226,36 +322,27 @@ class RealTimeEventManager extends EventEmitter {
       // Send push notification
       if (data.pushToken) {
         await sendPushNotification(data.pushToken, {
-          title: 'Attendance Marked',
+          title: "Attendance Marked",
           body: `Your attendance for ${data.eventName} has been recorded`,
           data: {
             eventId: data.eventId,
             points: data.points,
-            type: 'attendance',
+            type: "attendance",
           },
         });
       }
 
-      // Broadcast event
-      emitToRoom(getRoom('notifications'), 'attendance-marked', {
+      // Broadcast event ONLY after successful persistence
+      emitToRoom(getRoom("notifications"), "attendance-marked", {
         userId: data.userId,
         eventId: data.eventId,
         points: data.points,
+        notificationId: note.id,
         timestamp: new Date(),
       });
 
-      // Persist notification
-      try {
-        notificationsService.addNotification(data.userId || 'global', {
-          type: 'system',
-          title: 'Attendance Marked',
-          message: `Attendance for ${data.eventName} recorded. You earned ${data.points || 0} points.`,
-          link: `/events/${data.eventId}`,
-        });
-      } catch (err) { logger.warn('Failed to persist notification', { err: err.message }); }
-
       // Notify admin
-      emitToRoom(getRoom('admin'), 'admin:attendance-marked', {
+      emitToRoom(getRoom("admin"), "admin:attendance-marked", {
         userId: data.userId,
         userName: data.userName,
         eventName: data.eventName,
@@ -263,7 +350,7 @@ class RealTimeEventManager extends EventEmitter {
         timestamp: new Date(),
       });
     } catch (error) {
-      logger.error('Error handling attendance event', { error: error.message });
+      logger.error("Error handling attendance event", { error: error.message });
     }
   }
 
@@ -272,7 +359,7 @@ class RealTimeEventManager extends EventEmitter {
    */
   emitEvent(eventName, data) {
     this.emit(eventName, data);
-    logger.debug('Custom event emitted', { event: eventName });
+    logger.debug("Custom event emitted", { event: eventName });
   }
 }
 

@@ -11,7 +11,10 @@ const TYPE_CONFIG = {
 };
 
 function timeAgo(isoString) {
-  const diff = Math.floor((Date.now() - new Date(isoString)) / 1000);
+  if (!isoString) return 'just now';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return 'just now';
+  const diff = Math.floor((Date.now() - date) / 1000);
   if (diff < 60)   return `${diff}s ago`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400)return `${Math.floor(diff / 3600)}h ago`;
@@ -54,6 +57,8 @@ export default function NotificationBell() {
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.94 }}
         aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ''}`}
+        aria-expanded={isOpen}
+        aria-controls="notification-panel"
         style={{
           position: 'relative',
           background: isOpen ? 'rgba(204,17,17,0.18)' : 'rgba(255,255,255,0.12)',
@@ -115,6 +120,7 @@ export default function NotificationBell() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            id="notification-panel"
             initial={{ opacity: 0, y: -10, scale: 0.96 }}
             animate={{ opacity: 1, y: 0,   scale: 1    }}
             exit   ={{ opacity: 0, y: -8,  scale: 0.96 }}

@@ -6,6 +6,7 @@ import { NodeModal } from './NodeModal';
 import { parseStaticRoadmap } from '../../utils/roadmapParser';
 import { exportToJSON, validateRoadmapJSON, downloadSVG, downloadPNG } from '../../utils/exportRoadmap';
 import { roadmapData } from '../../data/roadmapData';
+import type { RoadmapDataMap } from '../../types/roadmap';
 import {
   ArrowLeft, Plus, Download, Upload, RotateCcw,
   Sparkles, Layers, BookOpen, AlertCircle, Edit, Save, Check
@@ -14,7 +15,7 @@ import {
 interface RoadmapBuilderInnerProps {
   onBack: () => void;
 }
-
+const typedRoadmapData = roadmapData as RoadmapDataMap; 
 const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => {
   const {
     nodes,
@@ -65,7 +66,7 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
   // Import static NexaSphere Roadmaps
   const handleImportStatic = (domainKey: string) => {
     if (!domainKey) return;
-    const staticData = (roadmapData as any)[domainKey];
+    const staticData = typedRoadmapData[domainKey];
     if (!staticData) return;
 
     if (
@@ -215,7 +216,7 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
               <option value="" disabled>Import Base Path</option>
               {Object.keys(roadmapData).map((key) => (
                 <option key={key} value={key}>
-                  {(roadmapData as any)[key].title}
+                  {typedRoadmapData[key].title}
                 </option>
               ))}
             </select>

@@ -248,9 +248,8 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
 
   const fetchManualEvents = async () => {
     const url = apiBase ? `${apiBase}/api/content/activity-events/${activityKey}` : `/api/content/activity-events/${activityKey}`;
-    const res = await fetch(url);
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && Array.isArray(data?.events)) setManualEvents(data.events);
+    const data = await apiClient(url).catch(() => ({}));
+    if (Array.isArray(data?.events)) setManualEvents(data.events);
   };
 
   useEffect(() => {
@@ -284,13 +283,11 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
     setBusy(true);
     try {
       const url = apiBase ? `${apiBase}/api/content/activity-events/${activityKey}` : `/api/content/activity-events/${activityKey}`;
-      const res = await fetch(url, {
+      const data = await apiClient(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...auth, eventName, eventDate, eventTagline, eventDescription }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Failed to add event');
       alert('Event added successfully.');
       await fetchManualEvents();
     } catch (e) {

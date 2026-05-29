@@ -820,7 +820,7 @@
 
 .team-card-name   { color: #F0F0F0 !important; }
 .team-card-role   { color: #EE3333 !important; }
-.team-card-hint   { color: #888888 !important; }
+.team-card-hint   { color: #8F8F8F !important; }
 .chip-branch      { color: #EE3333 !important; }
 .chip-section     { color: #CC1111 !important; }
 
@@ -835,9 +835,9 @@
 
 .section-subtitle { color: #A8A8A8 !important; }
 .about-text       { color: #A8A8A8 !important; }
-.cin-section-label{ color: #707070 !important; }
+.cin-section-label{ color: #8F8F8F !important; }
 .hero-tagline     { color: #B0B0B0 !important; }
-.ns-footer-text   { color: #707070 !important; }
+.ns-footer-text   { color: #8F8F8F !important; }
 
 [data-theme="light"] { color-scheme: light; }
 
@@ -864,12 +864,12 @@
 
 [data-theme="light"] .team-card-name   { color: #1A1A1A !important; }
 [data-theme="light"] .team-card-role   { color: #CC1111 !important; }
-[data-theme="light"] .team-card-hint   { color: #8A8A8A !important; }
+[data-theme="light"] .team-card-hint   { color: #5F5F5F !important; }
 [data-theme="light"] .chip-branch      { color: #AA0000 !important; }
 [data-theme="light"] .chip-section     { color: #880000 !important; }
 
 [data-theme="light"] .timeline-event-name { color: #880000 !important; }
-[data-theme="light"] .timeline-event-date { color: #8A8A8A !important; }
+[data-theme="light"] .timeline-event-date { color: #5F5F5F !important; }
 [data-theme="light"] .timeline-event-desc { color: #4A4A4A !important; }
 [data-theme="light"] .timeline-card        { background: #FFFFFF !important; }
 
@@ -882,7 +882,7 @@
 
 [data-theme="light"] .section-subtitle  { color: #4A4A4A !important; }
 [data-theme="light"] .about-text        { color: #4A4A4A !important; }
-[data-theme="light"] .cin-section-label { color: #8A8A8A !important; }
+[data-theme="light"] .cin-section-label { color: #5F5F5F !important; }
 [data-theme="light"] .ns-footer-text    { color: #5A5A5A !important; }
 [data-theme="light"] .ns-footer-text span { background: linear-gradient(135deg,#CC1111,#880000); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 
@@ -900,7 +900,7 @@
 [data-theme="light"] .contact-tab           { color: #CC1111 !important; }
 
 [data-theme="light"] .card-num          { color: rgba(204,17,17,.15) !important; }
-[data-theme="light"] .team-card-hint    { color: #8A8A8A !important; }
+[data-theme="light"] .team-card-hint    { color: #5F5F5F !important; }
 [data-theme="light"] .ns-footer-built   { color: #6B6B6B !important; }
 [data-theme="light"] .ns-footer-email-link { color: #CC1111 !important; }
 

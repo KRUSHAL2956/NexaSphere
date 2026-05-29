@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import apiClient from '../../utils/apiClient.js';
 import { useReactToPrint } from 'react-to-print';
 import { projectsData } from '../../data/projectsData';
 import { roadmapData } from '../../data/roadmapData';
@@ -19,15 +20,7 @@ export default function PublicPortfolio({ username, onBack }) {
         const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
         const url = base ? `${base}/api/portfolio/${username}` : `/api/portfolio/${username}`;
         
-        const res = await fetch(url);
-        if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error('Showcase portfolio not found');
-          }
-          throw new Error('Failed to retrieve portfolio details');
-        }
-        
-        const data = await res.json();
+        const data = await apiClient(url);
         if (alive) {
           setPortfolio(data);
           setIsLoading(false);
@@ -110,6 +103,7 @@ export default function PublicPortfolio({ username, onBack }) {
         <meta name="description" content={meta.description} />
         <meta name="keywords" content={meta.keywords} />
         <meta name="author" content={meta.author} />
+        <meta name="robots" content="index, follow" />
         
         <link rel="canonical" href={meta.url} />
         
@@ -119,6 +113,7 @@ export default function PublicPortfolio({ username, onBack }) {
         <meta property="og:image" content={meta.image} />
         <meta property="og:type" content={meta.type} />
         <meta property="og:url" content={meta.url} />
+        <meta property="og:site_name" content="NexaSphere" />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />

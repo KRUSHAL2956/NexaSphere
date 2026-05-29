@@ -1,8 +1,3 @@
-/**
- * Server-Sent Events (SSE) Service
- * Provides real-time event stream to admin dashboard
- */
-
 import logger from '../utils/logger.js';
 import { getPublicAppUrl } from '../utils/publicAppUrl.js';
 
@@ -52,13 +47,14 @@ export function addSSEClient(res) {
   });
 
   res.on('error', (error) => {
-    cleanupClient(res, 'error', { error: error?.message });
+    adminClients.delete(res);
+    if (res._heartbeat) clearInterval(res._heartbeat);
+    logger.error('SSE client error', { error: error.message });
   });
+
+  logger.info('SSE client connected', { totalClients: adminClients.size });
 }
 
-/**
- * Send SSE event to all connected clients
- */
 export function broadcastSSEEvent(eventName, data) {
   const eventData = JSON.stringify({
     type: eventName,
@@ -87,21 +83,32 @@ export function broadcastSSEEvent(eventName, data) {
       logger.error('Failed to send SSE event', { error: error.message });
       cleanupClient(client, 'write_error', { error: error?.message });
     }
-  });
+  }
 
   logger.debug('SSE event broadcast', { event: eventName, clientCount: adminClients.size });
 }
 
-/**
- * Get connected SSE clients count
- */
 export function getConnectedSSEClientsCount() {
   return adminClients.size;
 }
 
-/**
- * SSE middleware setup
- */
+const HEALTH_CHECK_INTERVAL_MS = 60000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [client, joined] of adminClients) {
+    if (now - joined > HEALTH_CHECK_INTERVAL_MS) {
+      try {
+        client.write(': ping\n\n');
+      } catch {
+        if (client._heartbeat) clearInterval(client._heartbeat);
+        adminClients.delete(client);
+        logger.warn('SSE client evicted (health check failed)', { totalClients: adminClients.size });
+      }
+    }
+  }
+}, HEALTH_CHECK_INTERVAL_MS).unref();
+
 export function setupSSEHeaders(req, res, next) {
   if (adminClients.size >= MAX_SSE_CLIENTS) {
     res.status(503).end('Too many SSE connections');
@@ -113,15 +120,12 @@ export function setupSSEHeaders(req, res, next) {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-  // Send initial connection message
+  // The app-level cors() middleware already selected the correct origin.
+  // Do not overwrite it here, or multi-origin deployments break.
+
   res.write(': SSE connection established\n\n');
 
-  // Send heartbeat every 30 seconds to keep connection alive
   res._heartbeat = setInterval(() => {
     try {
       res.write(': heartbeat\n\n');

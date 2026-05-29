@@ -8,9 +8,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @RestController
@@ -70,7 +72,10 @@ public class DashboardController {
             q2.setDescription("Participate in an upcoming hackathon event.");
             q2.setXpReward(200);
 
-            questRepository.saveAll(List.of(q1, q2));
+            List<QuestEntity> seeds = new ArrayList<>();
+            seeds.add(q1);
+            seeds.add(q2);
+            questRepository.saveAll(seeds);
             quests = questRepository.findByUserId(userId);
         }
         return ResponseEntity.ok(quests);
@@ -78,7 +83,8 @@ public class DashboardController {
 
     @PostMapping("/quests/{questId}/complete")
     public ResponseEntity<Map<String, Object>> completeQuest(@PathVariable String questId) {
-        Optional<QuestEntity> questOpt = questRepository.findById(questId);
+        String safeQuestId = Objects.requireNonNull(questId, "questId must not be null");
+        Optional<QuestEntity> questOpt = questRepository.findById(safeQuestId);
         if (questOpt.isPresent()) {
             QuestEntity quest = questOpt.get();
             if (!quest.isCompleted()) {

@@ -66,7 +66,7 @@ const PromptHistorySidebar = ({ isOpen, onSelectPrompt, currentWorkspace = 'defa
   };
 
   return (
-    <div className={`history-sidebar ${isOpen ? 'open' : 'closed'}`}>
+    <div id="prompt-history-sidebar" className={`history-sidebar ${isOpen ? 'open' : 'closed'}`}>
       <div className="sidebar-header">
         <h3>History</h3>
         <span className="workspace-badge">{getCurrentWorkspaceName()}</span>

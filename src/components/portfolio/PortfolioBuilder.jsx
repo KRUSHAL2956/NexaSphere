@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import apiClient from '../../utils/apiClient.js';
 import { projectsData } from '../../data/projectsData';
 import { roadmapData } from '../../data/roadmapData';
 import { RepoCardSkeleton } from '../ui/skeleton/RepoCardSkeleton';
@@ -82,9 +83,8 @@ export default function PortfolioBuilder() {
     try {
       const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
       const url = base ? `${base}/api/portfolio/${username}` : `/api/portfolio/${username}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
+      const data = await apiClient(url);
+      if (data) {
         setTitle(data.title || '');
         setBio(data.bio || '');
         setTheme(data.theme || 'glassmorphic');
@@ -138,16 +138,11 @@ export default function PortfolioBuilder() {
       const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
       const url = base ? `${base}/api/portfolio` : `/api/portfolio`;
       
-      const res = await fetch(url, {
+      const data = await apiClient(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save portfolio.');
-      }
 
       setSuccessMsg('Portfolio built and synchronized successfully!');
     } catch (err) {
@@ -180,13 +175,7 @@ export default function PortfolioBuilder() {
     setIsFetchingGh(true);
     setGhError('');
     try {
-      const res = await fetch(`https://api.github.com/users/${ghUsername}/repos?sort=updated&per_page=30`);
-      if (!res.ok) {
-        if (res.status === 404) throw new Error('GitHub user not found.');
-        if (res.status === 403) throw new Error('GitHub API rate limit exceeded.');
-        throw new Error('Failed to fetch repositories.');
-      }
-      const data = await res.json();
+      const data = await apiClient(`https://api.github.com/users/${ghUsername}/repos?sort=updated&per_page=30`);
       setGhRepos(data);
     } catch (err) {
       setGhError(err.message);

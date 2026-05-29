@@ -3,15 +3,17 @@
  * Provides reactive access to Socket.IO connections, room subscriptions, and event emitters
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import socketClient from '../utils/socketClient';
-import { getSocketServerUrl } from '../utils/runtimeConfig';
+import { useEffect, useState, useCallback } from "react";
+import socketClient from "../utils/socketClient";
+import { getSocketServerUrl } from "../utils/runtimeConfig";
 
 export function useSocket(serverUrl) {
   const [connected, setConnected] = useState(false);
   const [socketId, setSocketId] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Initialize socket connection if not already done
     const base = serverUrl || getSocketServerUrl();
     const socket = socketClient.initializeSocket(base);
@@ -34,8 +36,8 @@ export function useSocket(serverUrl) {
     };
 
     // Listen to standard connection events using socket directly
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
 
     // Sync initial state
     setConnected(socket.connected || false);
@@ -43,11 +45,10 @@ export function useSocket(serverUrl) {
 
     return () => {
       isMounted = false;
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
     };
   }, [serverUrl]);
-
 
   /**
    * Identify authenticated user to the WebSocket room
@@ -86,7 +87,6 @@ export function useSocket(serverUrl) {
   const off = useCallback((eventName, handler) => {
     socketClient.off(eventName, handler);
   }, []);
-
 
   /**
    * Emit event to the socket server

@@ -43,7 +43,7 @@ test('sanitizeCoreTeamMemberRecord escapes profile fields and optional links', (
     whatsapp: '1234567890',
     linkedin: 'https://example.com/?q="x"&y=<z>',
     instagram: 'https://instagram.com/<handle>',
-    photoUrl: 'https://cdn.example.com/"avatar".png?alt=<img>',
+    photoUrl: 'https://cdn.example.com/"avatar".png?alt=<img alt="">',
   });
 
   assert.equal(sanitized.name, '&lt;script&gt;Alice&lt;/script&gt;');
@@ -52,7 +52,7 @@ test('sanitizeCoreTeamMemberRecord escapes profile fields and optional links', (
   assert.equal(sanitized.branch, 'CSE &amp; IT');
   assert.equal(sanitized.linkedin, 'https://example.com/?q=&quot;x&quot;&amp;y=&lt;z&gt;');
   assert.equal(sanitized.instagram, 'https://instagram.com/&lt;handle&gt;');
-  assert.equal(sanitized.photoUrl, 'https://cdn.example.com/&quot;avatar&quot;.png?alt=&lt;img&gt;');
+  assert.equal(sanitized.photoUrl, 'https://cdn.example.com/&quot;avatar&quot;.png?alt=&lt;img alt=&quot;&quot;&gt;');
 });
 
 test('sanitizeActivityEventRecord strips createdBy PII', () => {

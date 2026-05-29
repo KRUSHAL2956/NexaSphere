@@ -84,9 +84,9 @@ async function fetchWithAuth(url, options = {}) {
     try {
       const res = await fetch(`${API_BASE}${url}`, {
         ...options,
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${auth.getToken()}`,
           ...options.headers,
         },
       });

@@ -11,6 +11,6 @@ public class Sanitizer {
             return null;
         }
         String trimmed = input.trim().replace("\u0000", "");
-        return HtmlUtils.htmlEscape(trimmed);
+        return HtmlUtils.htmlEscape(trimmed.isEmpty() ? trimmed : trimmed);
     }
 }

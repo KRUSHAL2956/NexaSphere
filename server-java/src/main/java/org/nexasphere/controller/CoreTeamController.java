@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -40,8 +41,9 @@ public class CoreTeamController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> remove(@PathVariable Long id) {
-        if (!repo.existsById(id)) return ResponseEntity.notFound().build();
-        repo.deleteById(id);
+        long safeId = Objects.requireNonNull(id, "id must not be null");
+        if (!repo.existsById(safeId)) return ResponseEntity.notFound().build();
+        repo.deleteById(safeId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -1,14 +1,9 @@
 package org.nexasphere.controller;
 
-import org.nexasphere.model.entity.ActivityEventEntity;
-import org.nexasphere.model.entity.CoreTeamMemberEntity;
-import org.nexasphere.model.entity.EventEntity;
 import org.nexasphere.repository.ActivityEventRepository;
 import org.nexasphere.repository.CoreTeamRepository;
 import org.nexasphere.repository.EventRepository;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**

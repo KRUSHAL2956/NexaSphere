@@ -29,6 +29,12 @@ const createMockReqRes = (ip, username, password) => {
       responseData = data;
       return this;
     },
+    cookie(name, value, options) {
+      return this;
+    },
+    clearCookie(name, options) {
+      return this;
+    },
     statusCode() {
       return statusCode;
     },

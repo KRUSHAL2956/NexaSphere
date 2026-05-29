@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import apiClient from '../../utils/apiClient.js';
 import InterestSelector from '../../components/dashboard/InterestSelector';
 import QuestTracker from '../../components/dashboard/QuestTracker';
 import Leaderboard from '../../components/dashboard/Leaderboard';
@@ -49,14 +50,9 @@ export default function DashboardPage({ onBack }) {
     if (interests.length === 0) return;
     setLoadingRecs(true);
     try {
-      const recommendationsUrl = buildUrl(getAiApiBase(), `/recommend/events/${currentUser.id}`);
-      if (!recommendationsUrl) {
-        throw new Error('Recommendations service is not configured');
-      }
-
-      const res = await fetch(recommendationsUrl);
-      if (res.ok) {
-        const data = await res.json();
+      const base = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+      const data = await apiClient(`${base}/recommend/events/${currentUser.id}`);
+      if (data) {
         setRecommendations(data.recommended_events || []);
       }
     } catch (e) {

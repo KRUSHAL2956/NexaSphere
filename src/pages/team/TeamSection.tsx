@@ -1,4 +1,5 @@
 import { type KeyboardEvent, type MouseEvent, type ReactNode, useEffect, useRef, useState } from 'react';
+import apiClient from '../../utils/apiClient.js';
 import { createPortal } from 'react-dom';
 import TeamMemberModal from './TeamMemberModal';
 import { IconSpark } from '../../shared/Icons';
@@ -89,8 +90,7 @@ export default function TeamSection({ onApply }: TeamSectionProps): ReactNode {
     const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
     const url = base ? `${base}/api/content/team` : '/api/content/team';
 
-    fetch(url)
-      .then(response => (response.ok ? response.json() : Promise.reject(new Error('Failed to load team'))))
+    apiClient(url)
       .then(data => {
         if (alive && Array.isArray(data?.members)) {
           setMembers(data.members);

@@ -12,7 +12,10 @@ const portfolioMutex = new Mutex();
 
 const BCRYPT_ROUNDS = 12;
 
-let schemaReady = null;
+let schemaAttempted = false;
+let schemaOk = false;
+let lastDbFailTime = 0;
+const DB_RETRY_TTL = 15000;
 
 export function canonicalizeUsername(username) {
   return String(username || '').trim().toLowerCase();
@@ -100,20 +103,37 @@ async function ensureSchema(client) {
 }
 
 async function ensureReady() {
-  if (schemaReady) return schemaReady;
-  
-  // Check if we can connect to PostgreSQL
-  try {
-    schemaReady = withDb(async (client) => {
-      await ensureSchema(client);
+  if (schemaOk) return true;
+
+  if (!schemaAttempted) {
+    schemaAttempted = true;
+    try {
+      await withDb(async (client) => {
+        await ensureSchema(client);
+      });
+      schemaOk = true;
       return true;
-    });
-    await schemaReady;
-  } catch (err) {
-    console.warn('PostgreSQL is not configured or not available. Falling back to local file storage for portfolios.', err.message);
-    schemaReady = Promise.resolve(false);
+    } catch (err) {
+      console.warn('PostgreSQL not available:', err.message);
+      lastDbFailTime = Date.now();
+      return false;
+    }
   }
-  return schemaReady;
+
+  if (Date.now() - lastDbFailTime > DB_RETRY_TTL) {
+    try {
+      await withDb(async (client) => {
+        await client.query('SELECT 1');
+      });
+      schemaOk = true;
+      return true;
+    } catch {
+      lastDbFailTime = Date.now();
+      return false;
+    }
+  }
+
+  return false;
 }
 
 // Local File Store Helpers
@@ -131,11 +151,6 @@ async function readLocalPortfolios() {
   await ensureLocalFile();
   const raw = await fs.readFile(PORTFOLIOS_FILE, 'utf8');
   return JSON.parse(raw);
-}
-
-async function writeLocalPortfolios(data) {
-  await ensureLocalFile();
-  await fs.writeFile(PORTFOLIOS_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
 function mapRow(row) {
@@ -219,10 +234,10 @@ export const portfolioRepository = {
       }
     }
 
-    // Local file fallback
+    // Local file fallback (read-only cache — fail closed when user is unknown)
     const portfolios = await readLocalPortfolios();
     const portfolio = portfolios[sanitizedUsername];
-    if (!portfolio) return true; // New registration
+    if (!portfolio) return false; // Cannot prove non-existence globally
     return await verifyHash(passkey, portfolio.passkeyHash);
   },
 
@@ -279,51 +294,7 @@ export const portfolioRepository = {
       }
     }
 
-    // Local file fallback
-    return await portfolioMutex.runExclusive(async () => {
-      const portfolios = await readLocalPortfolios();
-      const now = new Date().toISOString();
-      const existing = portfolios[sanitizedUsername] || { createdAt: now };
-
-
-       const updatedPortfolio = {
-        username,
-        passkeyHash,
-        theme,
-        visibleSections,
-        socialLinks,
-        customDomain,
-        seoMetadata,
-        skills,
-        badges,
-        projects,
-        roadmaps,
-        bio,
-        title,
-        createdAt: existing.createdAt,
-        updatedAt: now,
-      };
-      portfolios[sanitizedUsername] = updatedPortfolio;
-      await writeLocalPortfolios(portfolios);
-
-      return {
-        username: updatedPortfolio.username,
-        theme: updatedPortfolio.theme,
-        visibleSections: updatedPortfolio.visibleSections,
-        socialLinks: updatedPortfolio.socialLinks,
-        customDomain: updatedPortfolio.customDomain,
-        seoMetadata: updatedPortfolio.seoMetadata,
-        skills: updatedPortfolio.skills,
-        badges: updatedPortfolio.badges,
-        projects: updatedPortfolio.projects,
-        roadmaps: updatedPortfolio.roadmaps,
-        bio: updatedPortfolio.bio,
-        title: updatedPortfolio.title,
-        createdAt: updatedPortfolio.createdAt,
-        updatedAt: updatedPortfolio.updatedAt,
-      };
-
-    });
+    throw new Error('Portfolio storage is unavailable. Please try again later.');
   }
 };
 

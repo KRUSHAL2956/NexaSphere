@@ -91,12 +91,29 @@ export const notificationRateLimiter = rateLimit({
   },
 });
 
+// Activity-event auth rate limiter: 10 requests per IP per 15 minutes.
+// Applied to the publicly reachable POST/DELETE activity-event endpoints that
+// require a shared password. Backs up the in-process lockout so that even
+// when the server restarts the IP-level window survives in the rate-limit
+// store.
+export const activityAuthRateLimiter = rateLimit({
 // Portfolio update rate limiter — 10 requests per IP per 15 minutes
 export const portfolioRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    logger.warn("Activity-event auth rate limit exceeded", {
+      ip: req.ip,
+      path: req.originalUrl || req.path,
+      method: req.method,
+    });
+    res.status(options.statusCode).json({
+      error: "Too many attempts from this IP, please try again later.",
+    });
+  },
+});
   message: {
     error:
       "Too many portfolio update attempts from this IP, please try again after 15 minutes.",

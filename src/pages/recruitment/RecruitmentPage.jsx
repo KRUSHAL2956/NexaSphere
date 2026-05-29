@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import apiClient from '../../utils/apiClient.js';
 import { DynamicIcon, IconArrowLeft, IconArrowRight, IconBolt, IconShieldCheck, IconSpark, IconUsers } from '../../shared/Icons';
 import Footer from '../../shared/Footer';
 
@@ -954,18 +955,12 @@ export default function RecruitmentPage({ onBack }) {
       const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
       const url = base ? `${base}/api/submissions/recruitment` : '/api/submissions/recruitment';
 
-      const res = await fetch(url, {
+      const data = await apiClient(RECRUITMENT_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (res.status === 409) {
-        throw new Error('This email has already been used to submit an application.');
-      }
-      if (!res.ok) {
+      }).catch(() => ({}));
+      if (data && data.ok === false) {
         throw new Error(data?.error || 'Submission failed');
       }
 

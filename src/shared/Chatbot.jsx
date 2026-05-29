@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
-import "../styles/chatbot.css";
-import PromptHistorySidebar from "../components/history/PromptHistorySidebar";
-import SearchBar from "../components/history/SearchBar";
-import PinnedChats from "../components/history/PinnedChats";
-import { savePrompt, exportPrompts } from "../lib/promptStore";
-import { initializeWorkspaces } from "../lib/workspaceService";
-import { buildUrl, getAiApiBase } from "../utils/runtimeConfig";
+import React, { useState, useRef, useEffect } from 'react';
+import apiClient from '../utils/apiClient.js';
+import '../styles/chatbot.css';
+import PromptHistorySidebar from '../components/history/PromptHistorySidebar';
+import SearchBar from '../components/history/SearchBar';
+import PinnedChats from '../components/history/PinnedChats';
+import { savePrompt } from '../lib/promptStore';
+import { initializeWorkspaces } from '../lib/workspaceService';
+import { buildUrl, getAiApiBase } from '../utils/runtimeConfig';
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -80,32 +81,13 @@ const Chatbot = () => {
     }
 
     try {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 12000);
-      const response = await fetch(aiChatUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const data = await apiClient('http://localhost:8000/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: currentInput }),
         signal: controller.signal,
       });
-      window.clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(
-          `AI chat request failed with status ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "bot",
-          text:
-            data.reply ||
-            "Nexa-AI received the request, but the reply came back empty. Please try again.",
-        },
-      ]);
+      setMessages(prev => [...prev, { role: 'bot', text: data.reply }]);
     } catch (e) {
       console.error("AI chat request failed", e);
       setMessages((prev) => [
@@ -135,12 +117,17 @@ const Chatbot = () => {
   return (
     <div className="ns-chatbot-wrapper">
       {!isOpen ? (
-        <button className="chat-trigger-btn" onClick={() => setIsOpen(true)}>
+        <button 
+          className="chat-trigger-btn" 
+          onClick={() => setIsOpen(true)}
+          aria-expanded={isOpen}
+          aria-controls="chatbot-window"
+        >
           <div className="pulse-ring"></div>
           💬
         </button>
       ) : (
-        <div className="chat-window-glass">
+        <div id="chatbot-window" className="chat-window-glass">
           <PromptHistorySidebar
             isOpen={showSidebar}
             onSelectPrompt={handleSelectPrompt}
@@ -153,6 +140,8 @@ const Chatbot = () => {
                 className="history-toggle-btn"
                 onClick={() => setShowSidebar(!showSidebar)}
                 title="Toggle History"
+                aria-expanded={showSidebar}
+                aria-controls="prompt-history-sidebar"
               >
                 📋
               </button>

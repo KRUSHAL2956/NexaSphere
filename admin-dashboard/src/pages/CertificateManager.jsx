@@ -57,11 +57,11 @@ function CertRow({ cert }) {
     }}>
       <div>
         <div style={{ fontWeight: 600, color: '#fff' }}>{cert.student_name}</div>
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', fontFamily: 'monospace' }}>
+        <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.72rem', fontFamily: 'monospace' }}>
           {cert.certificate_id}
         </div>
       </div>
-      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', wordBreak: 'break-all' }}>
+      <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.78rem', wordBreak: 'break-all' }}>
         {cert.verification_url}
       </div>
       <button
@@ -70,7 +70,7 @@ function CertRow({ cert }) {
         style={{
           background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.07)',
           border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.12)'}`,
-          color: copied ? '#22c55e' : 'rgba(255,255,255,0.6)',
+          color: copied ? '#22c55e' : 'rgba(255,255,255,0.72)',
           borderRadius: '6px',
           padding: '6px 10px',
           cursor: 'pointer',
@@ -279,7 +279,7 @@ export function CertificateManager() {
             }}>
               <span style={{ color: '#22c55e', fontWeight: 700 }}>✓ Generated: {result.generated}</span>
               {result.skipped > 0 && (
-                <span style={{ color: 'rgba(255,255,255,0.4)' }}>⟳ Skipped (already issued): {result.skipped}</span>
+                <span style={{ color: 'rgba(255,255,255,0.72)' }}>⟳ Skipped (already issued): {result.skipped}</span>
               )}
             </div>
             <h4 style={{ fontSize: '0.82rem', opacity: 0.5, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>

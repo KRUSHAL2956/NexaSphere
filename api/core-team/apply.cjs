@@ -1,4 +1,5 @@
 const { google } = require('googleapis');
+const { z } = require('zod');
 
 function requiredEnv(name) {
   const v = process.env[name];
@@ -8,21 +9,6 @@ function requiredEnv(name) {
 
 function normalizePrivateKey(k) {
   return k.includes('\\n') ? k.replace(/\\n/g, '\n') : k;
-}
-
-function isEmail(s) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim());
-}
-
-function isGlBajajEmail(s) {
-  const v = String(s || '').trim().toLowerCase();
-  return isEmail(v) && v.endsWith('@glbajajgroup.org');
-}
-
-function isPhoneish(s) {
-  const v = String(s || '').trim();
-  if (!v) return false;
-  return /^\d{10}$/.test(v);
 }
 
 async function readJson(req) {
@@ -38,6 +24,48 @@ async function readJson(req) {
   if (!raw) return {};
   try { return JSON.parse(raw); } catch { return {}; }
 }
+
+const applySchema = z.object({
+  fullName: z.string().trim().min(1, 'fullName is required'),
+  collegeEmail: z.string().trim().email('Invalid email format').refine(
+    (email) => email.toLowerCase().endsWith('@glbajajgroup.org'),
+    { message: 'Email must end with @glbajajgroup.org.' }
+  ),
+  whatsapp: z.string().trim().regex(/^\d{10}$/, 'Invalid contact number (10 digits required).'),
+  year: z.string().trim().min(1, 'year is required'),
+  branch: z.string().trim().min(1, 'branch is required'),
+  section: z.string().trim().min(1, 'section is required'),
+  role: z.string().trim().min(1, 'role is required'),
+  skills: z.string().trim().min(1, 'skills are required'),
+  comms: z.string().trim().min(1, 'comms is required'),
+  campusExp: z.string().trim().min(1, 'campusExp is required'),
+  campusExpDetails: z.string().trim().optional().default(''),
+  links: z.string().trim().optional().default(''),
+  commitHours: z.string().trim().min(1, 'commitHours is required'),
+  attendCampus: z.string().trim().min(1, 'attendCampus is required'),
+  assessmentOk: z.string().trim().min(1, 'assessmentOk is required'),
+  whyJoin: z.string().trim().min(1, 'whyJoin is required'),
+  anythingElse: z.string().trim().optional().default(''),
+  interests: z.array(z.string()).optional(),
+  declaration: z.string().trim().optional().default(''),
+  declarationAccepted: z.boolean().optional(),
+  declarationSelected: z.array(z.string()).optional(),
+  submittedAt: z.string().trim().optional().default(''),
+  userAgent: z.string().trim().optional().default(''),
+}).refine((data) => {
+  if (data.declarationAccepted !== undefined) {
+    if (!data.declarationAccepted) return false;
+    if (Array.isArray(data.declarationSelected) && data.declarationSelected.includes('disagree')) {
+      return false;
+    }
+  } else {
+    if (data.declaration === 'I do not agree to the above declaration.') return false;
+  }
+  return true;
+}, {
+  message: 'Declaration not accepted.',
+  path: ['declaration'],
+});
 
 async function appendToSheet(payload) {
   const clientEmail = requiredEnv('GOOGLE_SERVICE_ACCOUNT_EMAIL');
@@ -98,48 +126,24 @@ module.exports = async (req, res) => {
 
     const body = await readJson(req);
 
-    const required = [
-      'fullName',
-      'collegeEmail',
-      'whatsapp',
-      'year',
-      'branch',
-      'section',
-      'role',
-      'skills',
-      'comms',
-      'campusExp',
-      'commitHours',
-      'attendCampus',
-      'assessmentOk',
-      'whyJoin',
-      // Support both new and old format.
-      'declaration',
-    ];
-
-    const hasNewDeclaration = body && typeof body === 'object' && body.declarationAccepted !== undefined;
-    const missing = required.filter(k => !String(body[k] || '').trim());
-    if (!hasNewDeclaration && missing.length) {
-      return res.status(400).json({ error: `Missing required field(s): ${missing.join(', ')}` });
-    }
-
-    if (!isGlBajajEmail(body.collegeEmail)) {
-      return res.status(400).json({ error: 'Email must end with @glbajajgroup.org.' });
-    }
-    if (!isPhoneish(body.whatsapp)) return res.status(400).json({ error: 'Invalid contact number (10 digits required).' });
-    if (hasNewDeclaration) {
-      if (!body.declarationAccepted) return res.status(400).json({ error: 'Declaration not accepted.' });
-      if (Array.isArray(body.declarationSelected) && body.declarationSelected.includes('disagree')) {
-        return res.status(400).json({ error: 'Declaration not accepted.' });
+    const result = applySchema.safeParse(body);
+    if (!result.success) {
+      const errors = result.error.errors;
+      const firstError = errors[0];
+      let msg = firstError.message;
+      if (firstError.code === 'invalid_type' || firstError.code === 'too_small') {
+        msg = `Missing required field: ${firstError.path.join('.')}`;
       }
-    } else {
-      if (body.declaration === 'I do not agree to the above declaration.') return res.status(400).json({ error: 'Declaration not accepted.' });
+      if (firstError.path.includes('declaration')) {
+        msg = 'Declaration not accepted.';
+      }
+      return res.status(400).json({ error: msg, details: errors });
     }
 
-    await appendToSheet(body);
+    const validatedData = result.data;
+    await appendToSheet(validatedData);
     return res.status(200).json({ ok: true });
   } catch (e) {
     return res.status(500).json({ error: e && e.message ? e.message : 'Server error' });
   }
 };
-

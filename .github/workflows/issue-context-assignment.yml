@@ -1,0 +1,201 @@
+name: GSSoC — Issue Context Assignment
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handles /assign, /assign gssoc, /assign nsoc commands in issue comments.
+# Validates: active assignment limit, account age, prior merged PRs.
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: issue-assignment-${{ github.event.issue.number }}-${{ github.actor }}
+  cancel-in-progress: false
+
+jobs:
+  handle-assignment:
+    name: Handle Assignment Request
+    runs-on: ubuntu-latest
+    if: >
+      !github.event.issue.pull_request &&
+      !endsWith(github.event.comment.user.login, '[bot]') &&
+      (startsWith(github.event.comment.body, '/assign') ||
+       contains(github.event.comment.body, '/assign gssoc') ||
+       contains(github.event.comment.body, '/assign nsoc'))
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Process assignment request
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const issue     = context.payload.issue;
+            const issueNum  = issue.number;
+            const commenter = context.payload.comment.user.login;
+
+            // ── Skip bots ─────────────────────────────────────────────────────
+            if (commenter.endsWith('[bot]')) {
+              console.log('⏭️  Skipping bot commenter.');
+              return;
+            }
+
+            // ── Helper: ensure label exists ───────────────────────────────────
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (e) {
+                if (e.status === 404) {
+                  await github.rest.issues.createLabel({ owner, repo, name, color, description });
+                }
+              }
+            }
+
+            await ensureLabel('pending-assignment', 'fbca04', 'Assignment pending mentor approval');
+            await ensureLabel('assigned',           '0e8a16', 'Issue is assigned to a contributor');
+
+            // ── Get issue labels to determine difficulty ───────────────────────
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner, repo, issue_number: issueNum,
+            });
+            const labelNames = labels.map(l => l.name);
+            const levelLabel = labelNames.find(n => n.startsWith('level:')) || 'level:beginner';
+
+            // ── Check if already assigned ─────────────────────────────────────
+            const assignees = (issue.assignees || []).map(a => a.login);
+            if (assignees.length > 0) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issueNum,
+                body: [
+                  `## ⚠️ Issue Already Assigned`,
+                  ``,
+                  `Sorry @${commenter}, this issue is already assigned to @${assignees.join(', @')}.`,
+                  ``,
+                  `Please find another open issue to work on!`,
+                  ``,
+                  `_GSSoC'26 automation · Mentor: [@Ayushh-Sharmaa](https://github.com/Ayushh-Sharmaa)_`,
+                ].join('\n'),
+              });
+              return;
+            }
+
+            // ── Check if commenter already has 3+ open assignments ────────────
+            const { data: allIssues } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', assignee: commenter, per_page: 10,
+            });
+            const openAssignments = allIssues.filter(i => !i.pull_request);
+            if (openAssignments.length >= 3) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issueNum,
+                body: [
+                  `## ⚠️ Assignment Limit Reached`,
+                  ``,
+                  `@${commenter}, you already have **${openAssignments.length} open assignments** (maximum is **3**).`,
+                  ``,
+                  `Please complete or close some of your current assignments before requesting a new one:`,
+                  openAssignments.map(i => `- #${i.number}: ${i.title}`).join('\n'),
+                  ``,
+                  `_GSSoC'26 automation · Mentor: [@Ayushh-Sharmaa](https://github.com/Ayushh-Sharmaa)_`,
+                ].join('\n'),
+              });
+              return;
+            }
+
+            // ── Beginner issues: auto-assign immediately ───────────────────────
+            if (levelLabel === 'level:beginner') {
+              await github.rest.issues.addAssignees({
+                owner, repo, issue_number: issueNum, assignees: [commenter],
+              });
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: issueNum, labels: ['assigned'],
+              });
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issueNum,
+                body: [
+                  `## 🎉 Assigned! @${commenter}`,
+                  ``,
+                  `You've been auto-assigned to this **beginner** issue (10 pts)!`,
+                  ``,
+                  `**Next steps:**`,
+                  `1. Fork the repo and create a branch`,
+                  `2. Make your changes following [CONTRIBUTING.md](https://github.com/${owner}/${repo}/blob/main/CONTRIBUTING.md)`,
+                  `3. Open a PR with \`Closes #${issueNum}\` in the description`,
+                  ``,
+                  `> ⚠️ No activity for 7 days will result in auto-unassignment.`,
+                  ``,
+                  `_GSSoC'26 automation · Mentor: [@Ayushh-Sharmaa](https://github.com/Ayushh-Sharmaa)_`,
+                ].join('\n'),
+              });
+              console.log(`✅ Auto-assigned @${commenter} to beginner issue #${issueNum}`);
+              return;
+            }
+
+            // ── Intermediate issues: account must be 30+ days old ─────────────
+            if (levelLabel === 'level:intermediate') {
+              const { data: userInfo } = await github.rest.users.getByUsername({ username: commenter });
+              const accountAge = (Date.now() - new Date(userInfo.created_at).getTime()) / (1000 * 60 * 60 * 24);
+              if (accountAge < 30) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: issueNum,
+                  body: [
+                    `## ⚠️ Eligibility Check Failed`,
+                    ``,
+                    `@${commenter}, your GitHub account must be **30+ days old** to claim intermediate issues.`,
+                    ``,
+                    `Your account is **${Math.floor(accountAge)} days old**. Please try beginner issues in the meantime!`,
+                    ``,
+                    `_GSSoC'26 automation · Mentor: [@Ayushh-Sharmaa](https://github.com/Ayushh-Sharmaa)_`,
+                  ].join('\n'),
+                });
+                return;
+              }
+            }
+
+            // ── Advanced issues: must have 1+ merged PR in this repo ──────────
+            if (levelLabel === 'level:advanced' || levelLabel === 'level:critical') {
+              const { data: mergedPRs } = await github.rest.search.issuesAndPullRequests({
+                q: `repo:${owner}/${repo} type:pr author:${commenter} is:merged`,
+              });
+              if (mergedPRs.total_count < 1) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: issueNum,
+                  body: [
+                    `## ⚠️ Eligibility Check Failed`,
+                    ``,
+                    `@${commenter}, you need at least **1 merged PR** in this repo to claim **${levelLabel}** issues.`,
+                    ``,
+                    `Start with beginner or intermediate issues to build your track record!`,
+                    ``,
+                    `_GSSoC'26 automation · Mentor: [@Ayushh-Sharmaa](https://github.com/Ayushh-Sharmaa)_`,
+                  ].join('\n'),
+                });
+                return;
+              }
+            }
+
+            // ── Queue for mentor approval (intermediate / advanced) ────────────
+            await github.rest.issues.addLabels({
+              owner, repo, issue_number: issueNum, labels: ['pending-assignment'],
+            });
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: issueNum,
+              body: [
+                `## ⏳ Assignment Request Queued`,
+                ``,
+                `@${commenter}, your request for this **${levelLabel}** issue has been queued for mentor approval!`,
+                ``,
+                `| Field | Value |`,
+                `|-------|-------|`,
+                `| 👤 Requester | @${commenter} |`,
+                `| 🎯 Difficulty | \`${levelLabel}\` |`,
+                `| ⏰ Requested | ${new Date().toUTCString()} |`,
+                ``,
+                `A mentor will review and approve within **24 hours**. If not, the request will be escalated to @Ayushh-Sharmaa.`,
+                ``,
+                `_GSSoC'26 automation · Mentor: [@Ayushh-Sharmaa](https://github.com/Ayushh-Sharmaa)_`,
+              ].join('\n'),
+            });
+            console.log(`⏳ Assignment queued for @${commenter} on issue #${issueNum} (${levelLabel})`);

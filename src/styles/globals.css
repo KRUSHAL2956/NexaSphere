@@ -114,7 +114,7 @@ button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent
   letter-spacing: .3em;
   text-transform: uppercase;
 }
-[data-theme="light"] .cin-section-label { color: #8A8A8A; }
+[data-theme="light"] .cin-section-label { color: #5F5F5F; }
 
 #scroll-progress {
   position: fixed;
@@ -217,7 +217,8 @@ button, a, input, select, [role="button"] {
 
     --text-primary:      #0d1117;
     --text-secondary:    #3a4560;
-    --text-muted:        #6b7a9e;
+    /* WCAG AA: muted text darkened from #6b7a9e for light surfaces. */
+    --text-muted:        #586783;
     --text-accent:       #1a2540;
 
     --border-color:      rgba(100, 120, 180, 0.25);
@@ -251,7 +252,8 @@ button, a, input, select, [role="button"] {
 
   --text-primary:      #0d1117;
   --text-secondary:    #3a4560;
-  --text-muted:        #6b7a9e;
+  /* WCAG AA: muted text darkened from #6b7a9e for light surfaces. */
+  --text-muted:        #586783;
   --text-accent:       #1a2540;
 
   --border-color:      rgba(100, 120, 180, 0.25);

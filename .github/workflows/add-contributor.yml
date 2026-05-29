@@ -1,0 +1,114 @@
+name: GSSoC — Add Contributor to README
+
+# ─────────────────────────────────────────────────────────────────────────────
+# When a PR is merged, adds the contributor's avatar/link to the Contributors
+# section of README.md if they're not already there.
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  pull_request_target:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      username:
+        description: 'GitHub username to add manually'
+        required: false
+
+concurrency:
+  group: add-contributor
+  cancel-in-progress: false
+
+jobs:
+  add-contributor:
+    name: Add Contributor to README
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.merged == true
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Add contributor avatar to README
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const fs = require('fs');
+
+            // Determine the contributor login
+            let contributor;
+            if (context.eventName === 'workflow_dispatch') {
+              contributor = context.payload.inputs?.username;
+            } else {
+              contributor = context.payload.pull_request.user.login;
+            }
+
+            if (!contributor) {
+              console.log('⏭️  No contributor username found — skipping');
+              return;
+            }
+
+            const EXCLUDE = new Set(['github-actions[bot]', 'dependabot[bot]',
+                                      'Ayushh-Sharmaa', 'S3DFX-CYBER']);
+            if (EXCLUDE.has(contributor) || contributor.endsWith('[bot]')) {
+              console.log(`⏭️  Skipping excluded user @${contributor}`);
+              return;
+            }
+
+            const START_MARKER = '<!-- CONTRIBUTORS_START -->';
+            const END_MARKER   = '<!-- CONTRIBUTORS_END -->';
+
+            // Read README.md
+            if (!fs.existsSync('README.md')) {
+              console.log('⚠️  README.md not found — skipping');
+              return;
+            }
+
+            let readme = fs.readFileSync('README.md', 'utf8');
+
+            // Check if markers exist
+            if (!readme.includes(START_MARKER) || !readme.includes(END_MARKER)) {
+              console.log('⏭️  No CONTRIBUTORS markers found in README.md — skipping');
+              return;
+            }
+
+            // Check if already present
+            if (readme.includes(`github.com/${contributor}`)) {
+              console.log(`✅ @${contributor} already in README.md — skipping`);
+              return;
+            }
+
+            // Build avatar HTML
+            const avatarHtml = `<a href="https://github.com/${contributor}"><img src="https://github.com/${contributor}.png" width="50px" alt="${contributor}" title="${contributor}" /></a>`;
+
+            // Insert before the END_MARKER
+            readme = readme.replace(
+              END_MARKER,
+              `${avatarHtml}\n${END_MARKER}`
+            );
+
+            fs.writeFileSync('README.md', readme, 'utf8');
+            console.log(`✅ Added @${contributor} to README.md contributors section`);
+
+            core.setOutput('contributor', contributor);
+            core.setOutput('modified', 'true');
+
+      - name: Commit and push README changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: add contributor @${{ github.event.pull_request.user.login || github.event.inputs.username }} to README [skip ci]"
+            git push
+          fi

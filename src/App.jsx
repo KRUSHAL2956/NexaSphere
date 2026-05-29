@@ -6,6 +6,7 @@ import './styles/animations.css';
 import './styles/chatbot.css';
 import './styles/components.css';
 import './styles/portfolio.css';
+import './styles/pwa.css';
 
 import './styles/aurora.css';
 import './styles/motion.css';
@@ -37,6 +38,7 @@ import AboutPage from './pages/about/AboutPage';
 import TeamPage from './pages/team/TeamPage';
 import ContactPage from './pages/contact/ContactPage';
 import dynamic from 'next/dynamic';
+import apiClient from './utils/apiClient.js';
 
 const RecruitmentPage = dynamic(() => import('./pages/recruitment/RecruitmentPage'), { ssr: false });
 const MembershipPage = dynamic(() => import('./pages/membership/MembershipPage'), { ssr: false });
@@ -44,25 +46,29 @@ const AdminPage = dynamic(() => import('./pages/admin/AdminPage'), { ssr: false 
 import RoadmapsPage from './pages/roadmaps/RoadmapsPage';
 import ProjectsPage from './pages/projects/ProjectsPage';
 import CertificateVerifyPage from './pages/certificates/CertificateVerifyPage';
-import CollabPage from './pages/collab/CollabPage';
-import PortfolioBuilder from './components/portfolio/PortfolioBuilder';
-import PublicPortfolio from './pages/portfolio/PublicPortfolio';
-import DashboardPage from './pages/dashboard/DashboardPage';
+import CollabPage          from './pages/collab/CollabPage';
+import PortfolioBuilder    from './components/portfolio/PortfolioBuilder';
+import PublicPortfolio     from './pages/portfolio/PublicPortfolio';
+import DashboardPage       from './pages/dashboard/DashboardPage';
+import AnalyticsPage       from './pages/analytics/AnalyticsPage';
 
 import { activityPages } from './data/activities/index';
 import { events as fallbackEvents } from './data/eventsData';
 import nexasphereLogo from './assets/images/logos/nexasphere-logo.png';
 
-import Terminal from './components/developer/Terminal';
+const Terminal = dynamic(() => import('./components/developer/Terminal'), { ssr: false });
 import { useDeveloperMode } from './hooks/useDeveloperMode';
 
 import { BookmarkProvider } from './context/BookmarkContext';
 import BookmarksDrawer from './components/bookmarks/BookmarksDrawer';
 import { useTheme } from './hooks/useTheme';
 import { useInteractionEffects } from './hooks/useInteractionEffects';
+import { useBackToTop } from './hooks/useScrollLogic';
 
 import MoveToTop from "./shared/MoveToTop";
-
+import OfflineBanner  from './components/pwa/OfflineBanner.jsx';
+import InstallPrompt  from './components/pwa/InstallPrompt.jsx';
+import UpdatePrompt   from './components/pwa/UpdatePrompt.jsx';
 
 const MNH = 88, DNH = 86;
 const TABS = ['Home', 'Dashboard', 'Activities', 'Events', 'Projects', 'Roadmaps', 'Portfolio', 'Collab', 'About', 'Team', 'Contact'];
@@ -223,8 +229,8 @@ function Cursor() {
   );
 }
 
+/* ── Thin router shell — no hooks here, so early return is safe ── */
 export default function App() {
-  /* ── Certificate verify route detection ── */
   const verifyCertId = (() => {
     const path = window.location.pathname;
     const m = path.match(/^\/verify\/([A-Za-z0-9_%-]+)/);
@@ -239,6 +245,12 @@ export default function App() {
       />
     );
   }
+
+  return <MainApp />;
+}
+
+/* ── Main app — all hooks live here, always called unconditionally ── */
+function MainApp() {
 
   const [cinDone, setCinDone] = useState(false);
   const [activeTab, setActiveTab] = useState('Home');
@@ -280,12 +292,8 @@ export default function App() {
   useEffect(() => {
     let alive = true;
     const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
-    const url = base ? `${base}/api/content/events` : '/api/content/events';
-    fetch(url)
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
+    const url  = base ? `${base}/api/content/events` : '/api/content/events';
+    apiClient(url)
       .then(data => {
         if (!alive) return;
         if (data && Array.isArray(data.events)) {
@@ -425,8 +433,8 @@ export default function App() {
   }, []);
 
   const onTab = useCallback(tab => {
-    if (['Dashboard', 'Activities', 'Events', 'Projects', 'Roadmaps', 'Portfolio', 'Collab', 'About', 'Team', 'Contact'].includes(tab)) {
-      nav(() => { setPage({ type: 'section', section: tab }); setActiveTab(tab); });
+    if (['Dashboard','Analytics','Activities','Events','Projects','Roadmaps','Portfolio','Collab','About','Team','Contact'].includes(tab)) {
+      nav(() => { setPage({ type:'section', section:tab }); setActiveTab(tab); });
       return;
     }
     nav(() => {
@@ -486,8 +494,24 @@ export default function App() {
   const nh = mobile ? MNH : DNH;
   const cur = page?.activityKey ? activityPages[page.activityKey] : null;
 
+  /* ── SW update prompt state ────────────────────────────────────────────── */
+  const [swUpdateFn, setSwUpdateFn] = useState(null);
+
+  useEffect(() => {
+    const handleSwUpdate = (e) => {
+      if (e.detail?.updateSW) setSwUpdateFn(() => e.detail.updateSW);
+    };
+    window.addEventListener('nexasphere:sw-update', handleSwUpdate);
+    return () => window.removeEventListener('nexasphere:sw-update', handleSwUpdate);
+  }, []);
+
   return (
     <BookmarkProvider>
+      {/* ── PWA Components ── */}
+      <OfflineBanner />
+      <InstallPrompt />
+      {swUpdateFn && <UpdatePrompt updateSW={swUpdateFn} />}
+
       {/* Chatbot – kept at very top */}
       <Chatbot />
 
@@ -516,20 +540,21 @@ export default function App() {
       <main style={{ paddingTop: nh, position: 'relative', zIndex: 1 }}>
         {page ? (
           <PageIn k={page.type + (page.section || page.activityKey)}>
-            {page.section === 'Dashboard' && <DashboardPage onBack={onBackHome} />}
-            {page.section === 'Activities' && <ActivitiesPage onNavigate={onNavigate} onBack={onBackHome} />}
-            {page.section === 'Events' && <EventsPage onBack={onBackHome} onEventClick={onKSSClick} events={eventsData} />}
-            {page.section === 'Projects' && <ProjectsPage onBack={onBackHome} />}
-            {page.section === 'Roadmaps' && <RoadmapsPage onBack={onBackHome} />}
-            {page.section === 'Portfolio' && <PortfolioBuilder />}
-            {page.section === 'Collab' && <CollabPage onBack={onBackHome} />}
-            {page.section === 'About' && <AboutPage onBack={onBackHome} />}
-            {page.section === 'Team' && <TeamPage onBack={onBackHome} onApply={openApply} />}
-            {page.section === 'Contact' && <ContactPage onBack={onBackHome} />}
-            {page.type === 'activity' && cur && <ActivityDetailPage activity={cur} onBack={onBackMain} onSelectEvent={onEvent} />}
-            {page.type === 'apply' && <RecruitmentPage onBack={onBackHome} />}
-            {page.type === 'join' && <MembershipPage onBack={onBackHome} />}
-            {page.type === 'admin' && <AdminPage onBack={onBackHome} />}
+            {page.section === 'Dashboard'  && <DashboardPage onBack={onBackHome}/>}
+            {page.section === 'Analytics'  && <AnalyticsPage onBack={onBackHome}/>}
+            {page.section === 'Activities' && <ActivitiesPage onNavigate={onNavigate} onBack={onBackHome}/>}
+            {page.section === 'Events'     && <EventsPage onBack={onBackHome} onEventClick={onKSSClick} events={eventsData}/>}
+            {page.section === 'Projects'   && <ProjectsPage onBack={onBackHome}/>}
+            {page.section === 'Roadmaps'   && <RoadmapsPage onBack={onBackHome}/>}
+            {page.section === 'Portfolio'  && <PortfolioBuilder />}
+            {page.section === 'Collab'     && <CollabPage onBack={onBackHome}/>}
+            {page.section === 'About'      && <AboutPage onBack={onBackHome}/>}
+            {page.section === 'Team'       && <TeamPage onBack={onBackHome} onApply={openApply}/>}
+            {page.section === 'Contact'    && <ContactPage onBack={onBackHome}/>}
+            {page.type === 'activity' && cur && <ActivityDetailPage activity={cur} onBack={onBackMain} onSelectEvent={onEvent}/>}
+            {page.type === 'apply'    && <RecruitmentPage onBack={onBackHome}/>}
+            {page.type === 'join'     && <MembershipPage  onBack={onBackHome}/>}
+            {page.type === 'admin'    && <AdminPage        onBack={onBackHome}/>}
             {page.type === 'event' && page.event && (
               <EventDetailPage event={page.event} onBack={page.activityKey ? onBackAct : onBackMain} />
             )}

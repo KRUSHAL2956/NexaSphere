@@ -106,7 +106,7 @@ function InfoRow({ icon, label, value }) {
       <div>
         <div style={{
           fontSize: '0.7rem',
-          color: 'rgba(255,255,255,0.4)',
+          color: 'rgba(255,255,255,0.72)',
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
           marginBottom: '3px',
@@ -135,7 +135,7 @@ function LoadingSpinner() {
         borderRadius: '50%',
         animation: 'ns-spin 0.8s linear infinite',
       }} role="status" aria-label="Loading" />
-      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', margin: 0 }}>
+      <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.9rem', margin: 0 }}>
         Verifying certificate…
       </p>
       <style>{`@keyframes ns-spin { to { transform: rotate(360deg); } }`}</style>

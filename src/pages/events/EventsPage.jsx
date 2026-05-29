@@ -36,6 +36,9 @@ export default function EventsPage({ onBack, onEventClick, events = fallbackEven
       return aIsUpcoming ? da - db : db - da;
     });
 
+function EventsPageContent({ onBack, onEventClick, events = fallbackEvents }) {
+  const [viewMode, setViewMode] = useState('list');
+  const safeEvents = Array.isArray(events) ? events : [];
   useEffect(() => {
     window.scrollTo({ top: 0 });
     const obs = new IntersectionObserver(entries => {

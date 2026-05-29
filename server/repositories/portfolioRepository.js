@@ -1,21 +1,26 @@
-import bcrypt from 'bcryptjs';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { withDb } from './db.js';
-import { Mutex } from 'async-mutex';
+import bcrypt from "bcryptjs";
+import { promises as fs } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { withDb } from "./db.js";
+import { Mutex } from "async-mutex";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PORTFOLIOS_FILE = path.join(__dirname, '..', 'data', 'portfolios.json');
+const PORTFOLIOS_FILE = path.join(__dirname, "..", "data", "portfolios.json");
 const portfolioMutex = new Mutex();
 
 const BCRYPT_ROUNDS = 12;
 
-let schemaReady = null;
+let schemaAttempted = false;
+let schemaOk = false;
+let lastDbFailTime = 0;
+const DB_RETRY_TTL = 15000;
 
 export function canonicalizeUsername(username) {
-  return String(username || '').trim().toLowerCase();
+  return String(username || "")
+    .trim()
+    .toLowerCase();
 }
 
 async function hashPasskey(passkey) {
@@ -100,20 +105,37 @@ async function ensureSchema(client) {
 }
 
 async function ensureReady() {
-  if (schemaReady) return schemaReady;
-  
-  // Check if we can connect to PostgreSQL
-  try {
-    schemaReady = withDb(async (client) => {
-      await ensureSchema(client);
+  if (schemaOk) return true;
+
+  if (!schemaAttempted) {
+    schemaAttempted = true;
+    try {
+      await withDb(async (client) => {
+        await ensureSchema(client);
+      });
+      schemaOk = true;
       return true;
-    });
-    await schemaReady;
-  } catch (err) {
-    console.warn('PostgreSQL is not configured or not available. Falling back to local file storage for portfolios.', err.message);
-    schemaReady = Promise.resolve(false);
+    } catch (err) {
+      console.warn("PostgreSQL not available:", err.message);
+      lastDbFailTime = Date.now();
+      return false;
+    }
   }
-  return schemaReady;
+
+  if (Date.now() - lastDbFailTime > DB_RETRY_TTL) {
+    try {
+      await withDb(async (client) => {
+        await client.query("SELECT 1");
+      });
+      schemaOk = true;
+      return true;
+    } catch {
+      lastDbFailTime = Date.now();
+      return false;
+    }
+  }
+
+  return false;
 }
 
 // Local File Store Helpers
@@ -123,19 +145,14 @@ async function ensureLocalFile() {
   try {
     await fs.access(PORTFOLIOS_FILE);
   } catch {
-    await fs.writeFile(PORTFOLIOS_FILE, JSON.stringify({}, null, 2), 'utf8');
+    await fs.writeFile(PORTFOLIOS_FILE, JSON.stringify({}, null, 2), "utf8");
   }
 }
 
 async function readLocalPortfolios() {
   await ensureLocalFile();
-  const raw = await fs.readFile(PORTFOLIOS_FILE, 'utf8');
+  const raw = await fs.readFile(PORTFOLIOS_FILE, "utf8");
   return JSON.parse(raw);
-}
-
-async function writeLocalPortfolios(data) {
-  await ensureLocalFile();
-  await fs.writeFile(PORTFOLIOS_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
 function mapRow(row) {
@@ -143,16 +160,37 @@ function mapRow(row) {
   return {
     username: row.username,
     theme: row.theme,
-    visibleSections: typeof row.visible_sections === 'string' ? JSON.parse(row.visible_sections) : row.visible_sections || {},
-    socialLinks: typeof row.social_links === 'string' ? JSON.parse(row.social_links) : row.social_links || {},
-    customDomain: row.custom_domain || '',
-    seoMetadata: typeof row.seo_metadata === 'string' ? JSON.parse(row.seo_metadata) : row.seo_metadata || {},
-    skills: typeof row.skills === 'string' ? JSON.parse(row.skills) : row.skills || [],
-    badges: typeof row.badges === 'string' ? JSON.parse(row.badges) : row.badges || [],
-    projects: typeof row.projects === 'string' ? JSON.parse(row.projects) : row.projects || [],
-    roadmaps: typeof row.roadmaps === 'string' ? JSON.parse(row.roadmaps) : row.roadmaps || [],
-    bio: row.bio || '',
-    title: row.title || '',
+    visibleSections:
+      typeof row.visible_sections === "string"
+        ? JSON.parse(row.visible_sections)
+        : row.visible_sections || {},
+    socialLinks:
+      typeof row.social_links === "string"
+        ? JSON.parse(row.social_links)
+        : row.social_links || {},
+    customDomain: row.custom_domain || "",
+    seoMetadata:
+      typeof row.seo_metadata === "string"
+        ? JSON.parse(row.seo_metadata)
+        : row.seo_metadata || {},
+    skills:
+      typeof row.skills === "string"
+        ? JSON.parse(row.skills)
+        : row.skills || [],
+    badges:
+      typeof row.badges === "string"
+        ? JSON.parse(row.badges)
+        : row.badges || [],
+    projects:
+      typeof row.projects === "string"
+        ? JSON.parse(row.projects)
+        : row.projects || [],
+    roadmaps:
+      typeof row.roadmaps === "string"
+        ? JSON.parse(row.roadmaps)
+        : row.roadmaps || [],
+    bio: row.bio || "",
+    title: row.title || "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -167,14 +205,17 @@ export const portfolioRepository = {
       try {
         return await withDb(async (client) => {
           const { rows } = await client.query(
-            'SELECT * FROM portfolios WHERE username = $1',
+            "SELECT * FROM portfolios WHERE username = $1",
             [sanitizedUsername]
           );
           if (!rows.length) return null;
           return mapRow(rows[0]);
         });
       } catch (err) {
-        console.error('Database query failed. Falling back to local file.', err);
+        console.error(
+          "Database query failed. Falling back to local file.",
+          err
+        );
       }
     }
 
@@ -187,14 +228,14 @@ export const portfolioRepository = {
       theme: portfolio.theme,
       visibleSections: portfolio.visibleSections || {},
       socialLinks: portfolio.socialLinks || {},
-      customDomain: portfolio.customDomain || '',
+      customDomain: portfolio.customDomain || "",
       seoMetadata: portfolio.seoMetadata || {},
       skills: portfolio.skills || [],
       badges: portfolio.badges || [],
       projects: portfolio.projects || [],
       roadmaps: portfolio.roadmaps || [],
-      bio: portfolio.bio || '',
-      title: portfolio.title || '',
+      bio: portfolio.bio || "",
+      title: portfolio.title || "",
       createdAt: portfolio.createdAt,
       updatedAt: portfolio.updatedAt,
     };
@@ -208,21 +249,24 @@ export const portfolioRepository = {
       try {
         return await withDb(async (client) => {
           const { rows } = await client.query(
-            'SELECT passkey_hash FROM portfolios WHERE username = $1',
+            "SELECT passkey_hash FROM portfolios WHERE username = $1",
             [sanitizedUsername]
           );
           if (!rows.length) return true; // Username does not exist, so it's a new registration (allow it)
           return await verifyHash(passkey, rows[0].passkey_hash);
         });
       } catch (err) {
-        console.error('Database query failed in verifyPasskey. Falling back to local file.', err);
+        console.error(
+          "Database query failed in verifyPasskey. Falling back to local file.",
+          err
+        );
       }
     }
 
-    // Local file fallback
+    // Local file fallback (read-only cache — fail closed when user is unknown)
     const portfolios = await readLocalPortfolios();
     const portfolio = portfolios[sanitizedUsername];
-    if (!portfolio) return true; // New registration
+    if (!portfolio) return false; // Cannot prove non-existence globally
     return await verifyHash(passkey, portfolio.passkeyHash);
   },
 
@@ -231,17 +275,22 @@ export const portfolioRepository = {
     const sanitizedUsername = canonicalizeUsername(data.username);
     const passkeyHash = await hashPasskey(data.passkey);
 
-    const theme = data.theme || 'glassmorphic';
-    const visibleSections = data.visibleSections || { quests: true, roadmaps: true, projects: true, analytics: false };
+    const theme = data.theme || "glassmorphic";
+    const visibleSections = data.visibleSections || {
+      quests: true,
+      roadmaps: true,
+      projects: true,
+      analytics: false,
+    };
     const socialLinks = data.socialLinks || {};
-    const customDomain = data.customDomain || '';
+    const customDomain = data.customDomain || "";
     const seoMetadata = data.seoMetadata || {};
     const skills = data.skills || [];
     const badges = data.badges || [];
     const projects = data.projects || [];
     const roadmaps = data.roadmaps || [];
-    const bio = data.bio || '';
-    const title = data.title || '';
+    const bio = data.bio || "";
+    const title = data.title || "";
 
     if (isDbAvailable) {
       try {
@@ -267,64 +316,35 @@ export const portfolioRepository = {
               updated_at = NOW()
             RETURNING *`,
             [
-              sanitizedUsername, passkeyHash, theme, JSON.stringify(visibleSections), JSON.stringify(socialLinks),
-              customDomain, JSON.stringify(seoMetadata), JSON.stringify(skills), JSON.stringify(badges),
-              JSON.stringify(projects), JSON.stringify(roadmaps), bio, title
+              sanitizedUsername,
+              passkeyHash,
+              theme,
+              JSON.stringify(visibleSections),
+              JSON.stringify(socialLinks),
+              customDomain,
+              JSON.stringify(seoMetadata),
+              JSON.stringify(skills),
+              JSON.stringify(badges),
+              JSON.stringify(projects),
+              JSON.stringify(roadmaps),
+              bio,
+              title,
             ]
           );
           return mapRow(rows[0]);
         });
       } catch (err) {
-        console.error('Database INSERT/UPDATE failed. Falling back to local file.', err);
+        console.error(
+          "Database INSERT/UPDATE failed. Falling back to local file.",
+          err
+        );
       }
     }
 
-    // Local file fallback
-    return await portfolioMutex.runExclusive(async () => {
-      const portfolios = await readLocalPortfolios();
-      const now = new Date().toISOString();
-      const existing = portfolios[sanitizedUsername] || { createdAt: now };
-
-
-       const updatedPortfolio = {
-        username,
-        passkeyHash,
-        theme,
-        visibleSections,
-        socialLinks,
-        customDomain,
-        seoMetadata,
-        skills,
-        badges,
-        projects,
-        roadmaps,
-        bio,
-        title,
-        createdAt: existing.createdAt,
-        updatedAt: now,
-      };
-      portfolios[sanitizedUsername] = updatedPortfolio;
-      await writeLocalPortfolios(portfolios);
-
-      return {
-        username: updatedPortfolio.username,
-        theme: updatedPortfolio.theme,
-        visibleSections: updatedPortfolio.visibleSections,
-        socialLinks: updatedPortfolio.socialLinks,
-        customDomain: updatedPortfolio.customDomain,
-        seoMetadata: updatedPortfolio.seoMetadata,
-        skills: updatedPortfolio.skills,
-        badges: updatedPortfolio.badges,
-        projects: updatedPortfolio.projects,
-        roadmaps: updatedPortfolio.roadmaps,
-        bio: updatedPortfolio.bio,
-        title: updatedPortfolio.title,
-        createdAt: updatedPortfolio.createdAt,
-        updatedAt: updatedPortfolio.updatedAt,
-      };
-
-    });
-  }
+    throw new Error(
+      "Portfolio storage is unavailable. Please try again later."
+    );
+  },
 };
 
 export const __portfolioRepositoryInternals = {

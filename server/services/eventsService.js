@@ -1,5 +1,5 @@
 import { eventsRepository } from "../repositories/eventsRepository.js";
-import { eventSchema } from "../validators/eventSchemas.js";
+import { baseEventSchema, eventSchema } from "../validators/eventSchemas.js";
 import cacheService from "./cacheService.js";
 
 export const eventsService = {
@@ -29,7 +29,7 @@ export const eventsService = {
   },
 
   async updateEvent(id, input) {
-    const patch = eventSchema.partial().parse({ ...input, id });
+    const patch = baseEventSchema.partial().parse({ ...input, id });
     const updated = await eventsRepository.update(id, patch);
 
     // Invalidate distributed events cache after successful commit

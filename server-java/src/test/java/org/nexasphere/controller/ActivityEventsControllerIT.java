@@ -16,6 +16,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Objects;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 class ActivityEventsControllerIT {
@@ -53,7 +55,7 @@ class ActivityEventsControllerIT {
 
         mockMvc.perform(post("/api/admin/activity-events/insight-session")
                 .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                 .content(objectMapper.writeValueAsString(event)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(startsWith("manual-")))
@@ -66,7 +68,7 @@ class ActivityEventsControllerIT {
         event.setName("Unauthorized Event");
 
         mockMvc.perform(post("/api/admin/activity-events/insight-session")
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                 .content(objectMapper.writeValueAsString(event)))
                 .andExpect(status().is4xxClientError());
     }

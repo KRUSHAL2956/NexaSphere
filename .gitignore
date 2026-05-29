@@ -1,54 +1,118 @@
-# Dependencies
-node_modules/
+# ──────────────────────────────────────────────────────────────────
+# NexaSphere .gitignore
+# ──────────────────────────────────────────────────────────────────
 
-# Build output
+# ── Node.js ───────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+
+# ── Build output ──────────────────────────────────────────────────
 dist/
 build/
+.next/
+out/
 
-# Local env files
+# ── Environment variables (NEVER commit secrets) ──────────────────
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
 
-# Editor
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Vite
+# ── Vite ──────────────────────────────────────────────────────────
 *.local
 .vercel
-*.db
 
-# Python
-__pycache__/
-*.py[cod]
-venv/
-.env
+# ── OS files ──────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# IDE / Editors
-.idea/
+# ── Editor & IDE ──────────────────────────────────────────────────
 .vscode/
+.idea/
 *.iml
 .project
 .classpath
 .settings/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Test / Build
-test_output.txt
-image.png
+# ── Python ────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
 .pytest_cache/
-node_modules/
-dist/
-build/
 
-# Custom GSSoC Issue Tracking
+# ── Java ──────────────────────────────────────────────────────────
+*.class
+*.jar
+*.war
+target/
+.gradle/
+
+# ── Testing ───────────────────────────────────────────────────────
+coverage/
+test-results/
+playwright-report/
+*.lcov
+
+# ── Logs ──────────────────────────────────────────────────────────
+*.log
+server/logs/
+ci-logs.txt
+
+# ── Scratch / Debug files (developer local artifacts) ─────────────
+# These files are temporary debug outputs and should never be committed.
+git_branches.txt
+git_branches_vv.txt
+git_commit_*.txt
+git_commit_raw.txt
+git_diff_files.txt
+git_graph.txt
+git_log_*.txt
+git_merge_base.txt
+git_porcelain.txt
+git_porcelain_post_ours.txt
+git_remotes.txt
+diff_server_*.txt
+diff_src_main.txt
+ayushh_main.js
+proposed_issue.md
+issues.json
+issues_utf8.json
+BACKEND_INTEGRATION_EXAMPLE*.js
+FRONTEND_INTEGRATION_EXAMPLE*.jsx
+PR_CONTENT_ISSUE_*.md
+PR_TEMPLATE_ISSUE_*.md
+*.env.example.issue*
+
+# ── GSSoC / Community tracking (local only) ───────────────────────
 GitHub_Issues/
 
-# Logs
-server/logs/
-*.log
+# ── Database ──────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Misc ──────────────────────────────────────────────────────────
+scratch/
+.cache/
+.turbo/
+image.png
+test_output.txt
 

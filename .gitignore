@@ -116,3 +116,8 @@ scratch/
 image.png
 test_output.txt
 
+
+issues*.json
+ci-logs.txt
+*_EXAMPLE*.js
+*_EXAMPLE*.jsx

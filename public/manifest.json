@@ -1,13 +1,17 @@
 {
-  "name": "NexaSphere",
+  "id": "/",
+  "name": "NexaSphere — Connecting GL Bajaj Tech Ecosystem",
   "short_name": "NexaSphere",
-  "description": "Real-time event management platform with live updates, notifications, and team collaboration",
+  "description": "The premier tech community of GL Bajaj Group of Institutions — connecting students through hackathons, codathons, workshops, and more.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#007bff",
-  "background_color": "#ffffff",
+  "theme_color": "#E63946",
+  "background_color": "#0A0A0A",
+  "lang": "en",
+  "categories": ["education", "productivity", "social"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -34,38 +38,18 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshot-540x720.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/screenshot-1280x720.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    }
-  ],
-  "categories": ["productivity", "lifestyle"],
-  "screenshots": [
-    {
-      "src": "/screenshot-narrow.png",
-      "sizes": "540x720",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/screenshot-wide.png",
-      "sizes": "1280x720",
-      "form_factor": "wide"
-    }
-  ],
   "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open your NexaSphere dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
     {
       "name": "View Events",
       "short_name": "Events",
-      "description": "View upcoming events",
+      "description": "Browse upcoming events",
       "url": "/events",
       "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     },
@@ -77,7 +61,6 @@
       "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     }
   ],
-  "prefer_related_applications": false,
   "share_target": {
     "action": "/share",
     "method": "POST",

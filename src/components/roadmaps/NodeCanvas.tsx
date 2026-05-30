@@ -9,14 +9,8 @@ interface NodeCanvasProps {
 }
 
 export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
-  const {
-    nodes,
-    updateNode,
-    deleteNode,
-    setSelectedNodeId,
-    activeNodeId,
-    setActiveNodeId
-  } = useRoadmapBuilder();
+  const { nodes, updateNode, deleteNode, setSelectedNodeId, activeNodeId, setActiveNodeId } =
+    useRoadmapBuilder();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
@@ -71,19 +65,27 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'In Progress': return 'var(--warning, #FFC107)';
-      case 'Completed': return 'var(--success, #4CAF50)';
-      case 'Stuck': return 'var(--error, #E63946)';
-      default: return theme === 'dark' ? '#6B6B6B' : '#8A8A8A';
+      case 'In Progress':
+        return 'var(--warning, #FFC107)';
+      case 'Completed':
+        return 'var(--success, #4CAF50)';
+      case 'Stuck':
+        return 'var(--error, #E63946)';
+      default:
+        return theme === 'dark' ? '#8F8F8F' : '#5F5F5F';
     }
   };
 
   const getStatusShadow = (status: string) => {
     switch (status) {
-      case 'In Progress': return '0 0 15px rgba(255, 193, 7, 0.4)';
-      case 'Completed': return '0 0 15px rgba(76, 175, 80, 0.4)';
-      case 'Stuck': return '0 0 15px rgba(230, 57, 70, 0.4)';
-      default: return '0 4px 12px rgba(0, 0, 0, 0.2)';
+      case 'In Progress':
+        return '0 0 15px rgba(255, 193, 7, 0.4)';
+      case 'Completed':
+        return '0 0 15px rgba(76, 175, 80, 0.4)';
+      case 'Stuck':
+        return '0 0 15px rgba(230, 57, 70, 0.4)';
+      default:
+        return '0 4px 12px rgba(0, 0, 0, 0.2)';
     }
   };
 
@@ -105,7 +107,7 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
       // Check for cycles
       const hasCycle = (source: string, target: string): boolean => {
         if (source === target) return true;
-        const targetNode = nodes.find(n => n.id === target);
+        const targetNode = nodes.find((n) => n.id === target);
         if (!targetNode) return false;
         for (const prereq of targetNode.prerequisites) {
           if (hasCycle(source, prereq)) return true;
@@ -114,14 +116,16 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
       };
 
       if (hasCycle(node.id, connectSourceId)) {
-        alert('Invalid Connection: Adding this prerequisite will create a circular dependency loop!');
+        alert(
+          'Invalid Connection: Adding this prerequisite will create a circular dependency loop!'
+        );
         setConnectSourceId(null);
         return;
       }
 
       // Add connection: make connectSourceId a prerequisite of node.id
       updateNode(node.id, {
-        prerequisites: [...node.prerequisites, connectSourceId]
+        prerequisites: [...node.prerequisites, connectSourceId],
       });
 
       setConnectSourceId(null);
@@ -136,7 +140,8 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
         <span className="instruction-text text-sm">
           {connectSourceId ? (
             <span className="text-warning font-semibold">
-              Connecting Mode Active: Click target node to establish connection, or click source again to cancel.
+              Connecting Mode Active: Click target node to establish connection, or click source
+              again to cancel.
             </span>
           ) : (
             'Drag nodes to organize. Double click or click edit (✎) to customize resources & notes. Check (🔗) to draw prerequisite paths.'
@@ -152,7 +157,7 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
           height: CANVAS_HEIGHT,
           position: 'relative',
           background: theme === 'dark' ? '#090909' : '#FAFAFA',
-          overflow: 'hidden'
+          overflow: 'hidden',
         }}
       >
         {/* Dynamic Grid Overlay */}
@@ -166,7 +171,7 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
             width: '100%',
             height: '100%',
             pointerEvents: 'none',
-            zIndex: 1
+            zIndex: 1,
           }}
         >
           <defs>
@@ -176,9 +181,9 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
             </linearGradient>
           </defs>
 
-          {nodes.map(node =>
-            node.prerequisites.map(preId => {
-              const fromNode = nodes.find(n => n.id === preId);
+          {nodes.map((node) =>
+            node.prerequisites.map((preId) => {
+              const fromNode = nodes.find((n) => n.id === preId);
               if (!fromNode) return null;
 
               // Calculate start and end coordinates centered on node cards
@@ -232,7 +237,7 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
         {/* Nodes Layer */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 10, pointerEvents: 'none' }}>
           <AnimatePresence>
-            {nodes.map(node => {
+            {nodes.map((node) => {
               const statusColor = getStatusColor(node.status);
               const isSelected = activeNodeId === node.id;
               const isConnectingSource = connectSourceId === node.id;
@@ -257,7 +262,7 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
                     boxShadow: getStatusShadow(node.status),
                     cursor: draggedNodeId === node.id ? 'grabbing' : 'grab',
                     pointerEvents: 'auto',
-                    userSelect: 'none'
+                    userSelect: 'none',
                   }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -278,7 +283,10 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
                     {/* Status marker */}
                     <div className="node-status-badge">
                       <span className="status-dot" style={{ backgroundColor: statusColor }} />
-                      <span className="status-text text-xxs font-bold uppercase" style={{ color: statusColor }}>
+                      <span
+                        className="status-text text-xxs font-bold uppercase"
+                        style={{ color: statusColor }}
+                      >
                         {node.status}
                       </span>
                     </div>

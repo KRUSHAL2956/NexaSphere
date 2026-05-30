@@ -60,11 +60,12 @@
 
   --t1: #FFFFFF;
   --t2: #B0B0B0;
-  --t3: #6B6B6B;
+  /* WCAG AA: muted text upgraded from #6B6B6B for 4.5:1+ contrast on dark cards. */
+  --t3: #8F8F8F;
 
   --text-primary:   #FFFFFF;
   --text-secondary: #B0B0B0;
-  --text-muted:     #6B6B6B;
+  --text-muted:     #8F8F8F;
 
   --bdr:  rgba(230, 57, 70, 0.15);
   --bdr2: rgba(230, 57, 70, 0.28);
@@ -111,11 +112,12 @@
 
   --t1: #1A1A1A;
   --t2: #4A4A4A;
-  --t3: #8A8A8A;
+  /* WCAG AA: muted text upgraded from #8A8A8A for 4.5:1+ contrast on light cards. */
+  --t3: #5F5F5F;
 
   --text-primary:   #1A1A1A;
   --text-secondary: #4A4A4A;
-  --text-muted:     #8A8A8A;
+  --text-muted:     #5F5F5F;
 
   --bdr:  rgba(230, 57, 70, 0.12);
   --bdr2: rgba(230, 57, 70, 0.22);

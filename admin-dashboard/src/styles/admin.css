@@ -9,6 +9,8 @@
   --red-hover: #ee2222;
   --text: #f0f0f0;
   --text2: #a0a0b0;
+  /* WCAG AA alias for muted inline styles used across admin pages. */
+  --text-muted: #a8a8b8;
   --sidebar-w: 220px;
   --radius: 8px;
 }
@@ -406,6 +408,13 @@ body {
 }
 
 .form-row textarea { resize: vertical; }
+
+.form-row input::placeholder,
+.form-row textarea::placeholder,
+.search-input::placeholder,
+.form-input::placeholder {
+  color: var(--text-muted);
+}
 
 .form-error {
   background: rgba(239,68,68,0.1);

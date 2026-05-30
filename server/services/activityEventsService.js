@@ -12,11 +12,13 @@ export const activityEventsService = {
   },
 
   async addActivityEvent(activityKey, input) {
+    await this.assertCanManage(input);
     const parsed = activityEventSchema.parse(input);
     return activityEventsRepository.create(activityKey, parsed);
   },
 
-  async deleteActivityEvent(activityKey, eventId) {
+  async deleteActivityEvent(activityKey, eventId, input) {
+    await this.assertCanManage(input);
     return activityEventsRepository.delete(activityKey, eventId);
   },
 };

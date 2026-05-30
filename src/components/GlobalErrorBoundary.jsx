@@ -1,37 +1,30 @@
 import React from 'react';
+import * as Sentry from '@sentry/react';
 import './GlobalErrorBoundary.css';
 
-class GlobalErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+const FallbackUI = () => {
+  return (
+    <div className="global-error-boundary" role="alert">
+      <div className="global-error-content">
+        <h1>Something went wrong. Please reload the page.</h1>
+        <button 
+          onClick={() => window.location.reload()}
+          aria-label="Reload the page"
+          className="retry-button"
+        >
+          Reload Page
+        </button>
+      </div>
+    </div>
+  );
+};
 
-  static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI.
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    // Log errors using console.error as required
-    console.error('GlobalErrorBoundary caught an error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="global-error-boundary">
-          <div className="global-error-content">
-            <h1>Something went wrong</h1>
-            <p>Please refresh the page and try again.</p>
-            <button onClick={() => window.location.reload()}>Refresh</button>
-          </div>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
+const GlobalErrorBoundary = ({ children }) => {
+  return (
+    <Sentry.ErrorBoundary fallback={FallbackUI}>
+      {children}
+    </Sentry.ErrorBoundary>
+  );
+};
 
 export default GlobalErrorBoundary;

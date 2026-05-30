@@ -10,7 +10,6 @@ export default function EventsPage({ onBack, onEventClick, events = fallbackEven
   const [view, setView] = useState('timeline');
   const [recommendationView, setRecommendationView] = useState(false);
 
-  // Auto-detect: if date has passed, treat as completed regardless of stored status
   const now = Date.now();
   const parseDate = ev => {
     const raw = ev.dateText ?? ev.date ?? '';
@@ -20,11 +19,10 @@ export default function EventsPage({ onBack, onEventClick, events = fallbackEven
   const getEffectiveStatus = ev => {
     if (ev.status === 'completed') return 'completed';
     const d = parseDate(ev);
-    if (d && d.getTime() < now) return 'completed'; // date passed → auto-complete
+    if (d && d.getTime() < now) return 'completed';
     return ev.status || 'upcoming';
   };
 
-  // Sort: upcoming first (earliest date first), then completed (most recent first)
   const sortedEvents = [...events]
     .map(ev => ({ ...ev, status: getEffectiveStatus(ev) }))
     .sort((a, b) => {
@@ -47,7 +45,6 @@ export default function EventsPage({ onBack, onEventClick, events = fallbackEven
 
   return (
     <div id="events-page" style={{ minHeight: '100vh', padding: '0 0 100px' }}>
-      
       <div className="page-banner" style={{
         background: 'linear-gradient(135deg, rgba(0,212,255,.06), rgba(123,111,255,.04))',
         borderBottom: '1px solid var(--bdr)',
@@ -73,7 +70,6 @@ export default function EventsPage({ onBack, onEventClick, events = fallbackEven
           Where ideas come to life. Every event is a milestone in the NexaSphere journey.
         </p>
 
-        {/* View Toggle Buttons */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'center', 

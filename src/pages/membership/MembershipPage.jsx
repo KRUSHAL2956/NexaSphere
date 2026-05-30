@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import apiClient from '../../utils/apiClient.js';
+import useFormValidation from '../../hooks/useFormValidation';
 import { DynamicIcon, IconArrowLeft, IconArrowRight, IconBolt, IconShieldCheck, IconUsers } from '../../shared/Icons';
 import Footer from '../../shared/Footer';
 
@@ -276,19 +278,13 @@ export default function MembershipPage({ onBack }) {
         whyJoin:        form.whyJoin.trim(),
       };
 
-      const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
-      const url = base ? `${base}/api/submissions/membership` : '/api/submissions/membership';
-
-      const res = await fetch(url, {
+      const data = await apiClient(MEMBERSHIP_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (res.status === 409) {
-        throw new Error('This email has already been used to submit a membership form.');
+      }).catch(() => ({}));
+      if (data && data.ok === false) {
+        throw new Error(data?.error || 'Membership form submission failed');
       }
 
       if (!res.ok) {

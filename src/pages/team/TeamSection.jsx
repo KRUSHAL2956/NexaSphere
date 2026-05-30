@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import apiClient from '../../utils/apiClient.js';
 import { createPortal } from 'react-dom';
 import TeamMemberModal from './TeamMemberModal';
 import { IconArrowRight, IconSpark } from '../../shared/Icons';
@@ -69,8 +70,7 @@ export default function TeamSection({ onApply }) {
     const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
     const url = base ? `${base}/api/content/team` : '/api/content/team';
     
-    fetch(url)
-      .then(r => r.ok ? r.json() : Promise.reject())
+    apiClient(url)
       .then(data => {
         if (!alive) return;
         if (Array.isArray(data?.members)) {

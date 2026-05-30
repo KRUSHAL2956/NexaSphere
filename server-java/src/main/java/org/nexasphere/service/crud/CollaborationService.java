@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -28,12 +29,14 @@ public class CollaborationService {
     }
 
     public CollaborationTeamEntity createTeam(CollaborationTeamEntity team) {
-        return teamRepository.save(team);
+        CollaborationTeamEntity saved = teamRepository.save(team);
+        return Objects.requireNonNull(saved, "saved team must not be null");
     }
 
     public JoinRequestEntity submitJoinRequest(JoinRequestEntity request) {
-        JoinRequestEntity saved = requestRepository.save(request);
-        
+        JoinRequestEntity saved = Objects.requireNonNull(
+                requestRepository.save(request), "saved join request must not be null");
+
         // Notify via Python microservice
         try {
             restTemplate.postForObject(PYTHON_SERVICE_URL, saved, String.class);
@@ -41,16 +44,17 @@ public class CollaborationService {
             // Log error, continue execution
             System.err.println("Failed to notify python microservice: " + e.getMessage());
         }
-        
+
         return saved;
     }
 
     public Optional<JoinRequestEntity> updateRequestStatus(Long requestId, String status) {
-        Optional<JoinRequestEntity> optionalReq = requestRepository.findById(requestId);
+        long safeId = Objects.requireNonNull(requestId, "requestId must not be null");
+        Optional<JoinRequestEntity> optionalReq = requestRepository.findById(safeId);
         if (optionalReq.isPresent()) {
             JoinRequestEntity req = optionalReq.get();
             req.setStatus(status);
-            return Optional.of(requestRepository.save(req));
+            return Optional.of(Objects.requireNonNull(requestRepository.save(req)));
         }
         return Optional.empty();
     }

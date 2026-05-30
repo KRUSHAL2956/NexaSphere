@@ -1,25 +1,32 @@
 import { generateUUID } from '../utils/uuid.js';
 
-/**
- * Simple in-memory notifications service.
- * For production, replace with DB-backed implementation (Postgres, Mongo, etc.).
- */
 const MAX_PER_USER = 10000;
-const notificationsStore = new Map(); // key: userId|'global', value: array
+const TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const notificationsStore = new Map();
 
 function _ensureList(userId = 'global') {
   if (!notificationsStore.has(userId)) notificationsStore.set(userId, []);
   return notificationsStore.get(userId);
 }
 
+function _removeExpired(list) {
+  const cutoff = Date.now() - TTL_MS;
+  while (list.length > 0 && new Date(list[list.length - 1].createdAt).getTime() < cutoff) {
+    list.pop();
+  }
+}
+
 export function getNotifications(userId = 'global') {
-  return _ensureList(userId).slice().sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  const list = _ensureList(userId);
+  _removeExpired(list);
+  return list.slice().sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 export function addNotification(userId = 'global', payload = {}) {
   const list = _ensureList(userId);
+  _removeExpired(list);
   while (list.length >= MAX_PER_USER) {
-    list.pop();
+    list.shift();
   }
   const id = generateUUID();
   const note = {

@@ -74,7 +74,7 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({ theme }) => {
       case 'In Progress': return 'var(--warning, #FFC107)';
       case 'Completed': return 'var(--success, #4CAF50)';
       case 'Stuck': return 'var(--error, #E63946)';
-      default: return theme === 'dark' ? '#6B6B6B' : '#8A8A8A';
+      default: return theme === 'dark' ? '#8F8F8F' : '#5F5F5F';
     }
   };
 

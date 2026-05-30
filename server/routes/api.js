@@ -12,9 +12,14 @@ router.get(
   '/api/content/activity-events/:activityKey',
   activityEventsController.listActivityEvents
 );
-router.post('/api/content/activity-events/:activityKey', activityEventsController.addActivityEvent);
+router.post(
+  '/api/content/activity-events/:activityKey',
+  adminAuthMiddleware.requireAdmin,
+  activityEventsController.addActivityEvent
+);
 router.delete(
   '/api/content/activity-events/:activityKey/:eventId',
+  adminAuthMiddleware.requireAdmin,
   activityEventsController.deleteActivityEvent
 );
 

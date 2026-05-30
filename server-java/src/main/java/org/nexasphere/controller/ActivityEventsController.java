@@ -39,9 +39,12 @@ public class ActivityEventsController {
 
     @DeleteMapping("/{activityKey}/{id}")
     public ResponseEntity<Void> delete(@PathVariable String activityKey, @PathVariable Long id) {
-        var found = repo.findById(id).filter(e -> e.getActivityKey().equals(activityKey));
-        if (found.isEmpty()) return ResponseEntity.notFound().build();
-        repo.delete(found.get());
-        return ResponseEntity.noContent().build();
+        return repo.findById(id)
+                .filter(e -> activityKey.equals(e.getActivityKey()))
+                .map(e -> {
+                    repo.delete(e);
+                    return ResponseEntity.<Void>noContent().build();
+                })
+                .orElseGet(() -> ResponseEntity.<Void>notFound().build());
     }
 }

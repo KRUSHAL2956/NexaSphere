@@ -1,72 +1,122 @@
-/**
- * Server-Sent Events (SSE) Service
- * Provides real-time event stream to admin dashboard
- */
-
 import logger from '../utils/logger.js';
+import { getPublicAppUrl } from '../utils/publicAppUrl.js';
 
 const adminClients = new Set();
+const MAX_SSE_CLIENTS = Math.max(1, parseInt(process.env.MAX_SSE_CLIENTS || '200', 10) || 200);
+const HEARTBEAT_INTERVAL_MS = Math.max(
+  5_000,
+  parseInt(process.env.SSE_HEARTBEAT_INTERVAL_MS || '30000', 10) || 30_000
+);
+const MAX_DROPPED_WRITES = Math.max(
+  1,
+  parseInt(process.env.SSE_MAX_DROPPED_WRITES || '3', 10) || 3
+);
+
+function cleanupClient(res, reason, meta = {}) {
+  if (!adminClients.has(res)) return;
+  adminClients.delete(res);
+  if (res._heartbeat) clearInterval(res._heartbeat);
+  res._heartbeat = null;
+  res._droppedWrites = 0;
+  logger.info('SSE client removed', { reason, totalClients: adminClients.size, ...meta });
+}
 
 /**
  * Add SSE client
  */
 export function addSSEClient(res) {
+  if (adminClients.size >= MAX_SSE_CLIENTS) {
+    logger.warn('SSE client rejected: max clients reached', {
+      totalClients: adminClients.size,
+      maxClients: MAX_SSE_CLIENTS,
+    });
+    // setupSSEHeaders likely already wrote headers; best-effort close.
+    try {
+      res.end();
+    } catch (_) {
+      // ignore
+    }
+    return;
+  }
+
   adminClients.add(res);
   logger.info('SSE client connected', { totalClients: adminClients.size });
 
   res.on('close', () => {
-    adminClients.delete(res);
-    if (res._heartbeat) clearInterval(res._heartbeat);
-    logger.info('SSE client disconnected', { totalClients: adminClients.size });
+    cleanupClient(res, 'close');
   });
 
   res.on('error', (error) => {
     adminClients.delete(res);
-    if (res._heartbeat) clearInterval(res._heartbeat)
+    if (res._heartbeat) clearInterval(res._heartbeat);
     logger.error('SSE client error', { error: error.message });
   });
+
+  logger.info('SSE client connected', { totalClients: adminClients.size });
 }
 
-/**
- * Send SSE event to all connected clients
- */
 export function broadcastSSEEvent(eventName, data) {
   const eventData = JSON.stringify({
     type: eventName,
     data,
     timestamp: new Date().toISOString(),
   });
+  const message = `event: ${eventName}\ndata: ${eventData}\n\n`;
 
-  const dead = [];
   adminClients.forEach((client) => {
     try {
-      client.write(`event: ${eventName}\n`);
-      client.write(`data: ${eventData}\n\n`);
+      const ok = client.write(message);
+      if (!ok) {
+        client._droppedWrites = (client._droppedWrites || 0) + 1;
+        if (client._droppedWrites >= MAX_DROPPED_WRITES) {
+          cleanupClient(client, 'backpressure');
+          try {
+            client.end();
+          } catch (_) {
+            // ignore
+          }
+        }
+      } else {
+        client._droppedWrites = 0;
+      }
     } catch (error) {
       logger.error('Failed to send SSE event', { error: error.message });
-      dead.push(client);
+      cleanupClient(client, 'write_error', { error: error?.message });
     }
-  });
-
-  dead.forEach((c) => {
-    adminClients.delete(c);
-    clearInterval(c._heartbeat);
-  });
+  }
 
   logger.debug('SSE event broadcast', { event: eventName, clientCount: adminClients.size });
 }
 
-/**
- * Get connected SSE clients count
- */
 export function getConnectedSSEClientsCount() {
   return adminClients.size;
 }
 
-/**
- * SSE middleware setup
- */
+const HEALTH_CHECK_INTERVAL_MS = 60000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [client, joined] of adminClients) {
+    if (now - joined > HEALTH_CHECK_INTERVAL_MS) {
+      try {
+        client.write(': ping\n\n');
+      } catch {
+        if (client._heartbeat) clearInterval(client._heartbeat);
+        adminClients.delete(client);
+        logger.warn('SSE client evicted (health check failed)', { totalClients: adminClients.size });
+      }
+    }
+  }
+}, HEALTH_CHECK_INTERVAL_MS).unref();
+
 export function setupSSEHeaders(req, res, next) {
+  if (adminClients.size >= MAX_SSE_CLIENTS) {
+    res.status(503).end('Too many SSE connections');
+    return;
+  }
+
+  const allowedOrigin = getPublicAppUrl();
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -74,20 +124,20 @@ export function setupSSEHeaders(req, res, next) {
   // The app-level cors() middleware already selected the correct origin.
   // Do not overwrite it here, or multi-origin deployments break.
 
-  // Send initial connection message
   res.write(': SSE connection established\n\n');
 
-  // Send heartbeat every 30 seconds to keep connection alive
   res._heartbeat = setInterval(() => {
     try {
       res.write(': heartbeat\n\n');
     } catch (error) {
       clearInterval(res._heartbeat);
+      cleanupClient(res, 'heartbeat_error', { error: error?.message });
     }
-  }, 30000);
+  }, HEARTBEAT_INTERVAL_MS);
 
   res.on('close', () => {
     clearInterval(res._heartbeat);
+    cleanupClient(res, 'close');
   });
 
   next();

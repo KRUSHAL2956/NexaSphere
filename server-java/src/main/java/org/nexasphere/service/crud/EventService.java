@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class EventService {
@@ -31,19 +32,21 @@ public class EventService {
     }
 
     public EventEntity createEvent(EventEntity event, String adminEmail) {
+        String safeEmail = Objects.requireNonNull(adminEmail, "adminEmail must not be null");
         sanitize(event);
         event.generateId();
         if (repo.existsById(event.getId())) {
             event.setId(event.getId() + "-" + System.currentTimeMillis());
         }
         EventEntity saved = repo.save(event);
-        publisher.publish(new EventCreatedEvent(adminEmail, saved));
+        publisher.publish(new EventCreatedEvent(safeEmail, Objects.requireNonNull(saved)));
         return saved;
     }
 
     public EventEntity updateEvent(String id, EventEntity updates, String adminEmail) {
-        EventEntity existing = repo.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        String safeEmail = Objects.requireNonNull(adminEmail, "adminEmail must not be null");
+        EventEntity existing = Objects.requireNonNull(
+                repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
 
         EventEntity snapshot = snapshot(existing);
         sanitize(updates);
@@ -57,15 +60,16 @@ public class EventService {
         existing.setTags(updates.getTags());
 
         EventEntity saved = repo.save(existing);
-        publisher.publish(new EventUpdatedEvent(adminEmail, snapshot, saved));
+        publisher.publish(new EventUpdatedEvent(safeEmail, snapshot, Objects.requireNonNull(saved)));
         return saved;
     }
 
     public void deleteEvent(String id, String adminEmail) {
-        EventEntity event = repo.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        String safeEmail = Objects.requireNonNull(adminEmail, "adminEmail must not be null");
+        EventEntity event = Objects.requireNonNull(
+                repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
         repo.delete(event);
-        publisher.publish(new EventDeletedEvent(adminEmail, event));
+        publisher.publish(new EventDeletedEvent(safeEmail, event));
     }
 
     private void sanitize(EventEntity e) {

@@ -29,6 +29,12 @@ const createMockReqRes = (ip, username, password) => {
       responseData = data;
       return this;
     },
+    cookie(name, value, options) {
+      return this;
+    },
+    clearCookie(name, options) {
+      return this;
+    },
     statusCode() {
       return statusCode;
     },
@@ -170,32 +176,43 @@ test('Security Audit & Validation: Admin Authentication Rate Limiter', async (t)
     assert.equal(adminAuthMiddleware._getLoginAttemptsMapSize(), 1);
   });
 
-  await t.test('Adversarial: Eviction Pressure Brute-Force Bypass Mitigation', async () => {
+  await t.test('Adversarial: Eviction priority evicts blocked IPs before unblocked ones', async () => {
     adminAuthMiddleware._clearAllLoginAttempts();
-    
-    const targetIp = '10.0.0.1';
-    
-    // Fail login 3 times to get near block threshold (attempts > 2)
+
+    const blockedIp = '10.0.0.1';
+    const unblockedIp = '10.0.0.2';
+
+    // Block blockedIp with 3 failed attempts (> max 2)
     for (let i = 0; i < 3; i++) {
-      const { req, res } = createMockReqRes(targetIp, 'admin', 'wrongpass');
+      const { req, res } = createMockReqRes(blockedIp, 'admin', 'wrongpass');
       await adminAuthMiddleware.login(req, res);
     }
-    
-    // 4th attempt from targetIp MUST be rate-limited
-    const { req: reqBlock, res: resBlock } = createMockReqRes(targetIp, 'admin', 'wrongpass');
-    await adminAuthMiddleware.login(reqBlock, resBlock);
-    assert.equal(resBlock.statusCode(), 429);
-    
-    // Flood map with 15 unique IPs to hit max capacity limit (5) and trigger eviction
-    for (let i = 2; i <= 17; i++) {
+    const { req: reqCheckBlocked, res: resCheckBlocked } = createMockReqRes(blockedIp, 'admin', 'wrongpass');
+    await adminAuthMiddleware.login(reqCheckBlocked, resCheckBlocked);
+    assert.equal(resCheckBlocked.statusCode(), 429);
+
+    // Add unblockedIp with 1 failed attempt
+    const { req: reqUnblocked, res: resUnblocked } = createMockReqRes(unblockedIp, 'admin', 'wrongpass');
+    await adminAuthMiddleware.login(reqUnblocked, resUnblocked);
+    assert.equal(resUnblocked.statusCode(), 401);
+
+    // Flood map with 8 more unique IPs to fill past capacity (5) and trigger eviction
+    for (let i = 3; i <= 10; i++) {
       const { req, res } = createMockReqRes(`10.0.0.${i}`, 'admin', 'wrongpass');
       await adminAuthMiddleware.login(req, res);
     }
-    
-    // Target IP representing active brute force must still be blocked (i.e. preserved in map)
-    const { req: reqVerify, res: resVerify } = createMockReqRes(targetIp, 'admin', 'wrongpass');
-    await adminAuthMiddleware.login(reqVerify, resVerify);
-    assert.equal(resVerify.statusCode(), 429);
+
+    assert.equal(adminAuthMiddleware._getLoginAttemptsMapSize(), 5);
+
+    // blockedIp must be evicted (blocked IPs are evicted first)
+    const { req: reqVerifyEvicted, res: resVerifyEvicted } = createMockReqRes(blockedIp, 'admin', 'wrongpass');
+    await adminAuthMiddleware.login(reqVerifyEvicted, resVerifyEvicted);
+    assert.equal(resVerifyEvicted.statusCode(), 401);
+
+    // unblockedIp must still be in map (unblocked IPs preserved)
+    const { req: reqVerifyPreserved, res: resVerifyPreserved } = createMockReqRes(unblockedIp, 'admin', 'wrongpass');
+    await adminAuthMiddleware.login(reqVerifyPreserved, resVerifyPreserved);
+    assert.equal(resVerifyPreserved.statusCode(), 401);
   });
 
   await t.test('Stress & Concurrency: 1000 Concurrent Requests', async () => {

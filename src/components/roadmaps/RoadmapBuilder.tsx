@@ -4,17 +4,33 @@ import { useRoadmapBuilder } from '../../hooks/useRoadmapBuilder';
 import { NodeCanvas } from './NodeCanvas';
 import { NodeModal } from './NodeModal';
 import { parseStaticRoadmap } from '../../utils/roadmapParser';
-import { exportToJSON, validateRoadmapJSON, downloadSVG, downloadPNG } from '../../utils/exportRoadmap';
-import { roadmapData } from '../../data/roadmapData';
 import {
-  ArrowLeft, Plus, Download, Upload, RotateCcw,
-  Sparkles, Layers, BookOpen, AlertCircle, Edit, Save, Check
+  exportToJSON,
+  validateRoadmapJSON,
+  downloadSVG,
+  downloadPNG,
+} from '../../utils/exportRoadmap';
+import { roadmapData } from '../../data/roadmapData';
+import type { RoadmapDataMap } from '../../types/roadmap';
+import {
+  ArrowLeft,
+  Plus,
+  Download,
+  Upload,
+  RotateCcw,
+  Sparkles,
+  Layers,
+  BookOpen,
+  AlertCircle,
+  Edit,
+  Save,
+  Check,
 } from 'lucide-react';
 
 interface RoadmapBuilderInnerProps {
   onBack: () => void;
 }
-
+const typedRoadmapData = roadmapData as RoadmapDataMap;
 const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => {
   const {
     nodes,
@@ -25,7 +41,7 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
     loadRoadmap,
     resetRoadmap,
     addNode,
-    setSelectedNodeId
+    setSelectedNodeId,
   } = useRoadmapBuilder();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,10 +57,14 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
   // Sync theme changes
   React.useEffect(() => {
     const observer = new MutationObserver(() => {
-      const currentTheme = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') || 'dark';
+      const currentTheme =
+        (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') || 'dark';
       setActiveTheme(currentTheme);
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
     return () => observer.disconnect();
   }, []);
 
@@ -52,25 +72,28 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
   const handleAddNewNode = () => {
     addNode({
       title: 'New Topic',
-      description: 'Click the edit button (✎) to add a description, prerequisites, and resource links.',
+      description:
+        'Click the edit button (✎) to add a description, prerequisites, and resource links.',
       x: 350,
       y: 100 + nodes.length * 60, // staggered visual stacking
       status: 'Not Started',
       notes: '',
       resources: [],
-      prerequisites: []
+      prerequisites: [],
     });
   };
 
   // Import static NexaSphere Roadmaps
   const handleImportStatic = (domainKey: string) => {
     if (!domainKey) return;
-    const staticData = (roadmapData as any)[domainKey];
+    const staticData = typedRoadmapData[domainKey];
     if (!staticData) return;
 
     if (
       nodes.length > 0 &&
-      !confirm('Loading this base template will overwrite your active workspace. Do you wish to continue?')
+      !confirm(
+        'Loading this base template will overwrite your active workspace. Do you wish to continue?'
+      )
     ) {
       return;
     }
@@ -114,7 +137,11 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
 
   // Reset workspace
   const handleResetWorkspace = () => {
-    if (confirm('Are you sure you want to clear your current workspace? All unsaved custom data will be deleted.')) {
+    if (
+      confirm(
+        'Are you sure you want to clear your current workspace? All unsaved custom data will be deleted.'
+      )
+    ) {
       resetRoadmap();
       setMetaTitle('New Learning Path');
       setMetaDesc('Custom learning flow created on NexaSphere.');
@@ -140,7 +167,7 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
           >
             <ArrowLeft size={16} /> Back
           </button>
-          
+
           <div className="builder-title-block">
             {isEditingMeta ? (
               <div className="meta-edit-inputs glassmorphic-panel p-4 flex flex-col gap-2 rounded-xl mt-2">
@@ -159,7 +186,10 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
                   placeholder="Short Description"
                 />
                 <div className="flex gap-2 justify-end mt-2">
-                  <button onClick={handleSaveMeta} className="btn btn-sm btn-primary flex items-center gap-1">
+                  <button
+                    onClick={handleSaveMeta}
+                    className="btn btn-sm btn-primary flex items-center gap-1"
+                  >
                     <Check size={14} /> Save
                   </button>
                 </div>
@@ -170,9 +200,7 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
                   <h1 className="builder-main-title text-2xl font-black font-orbitron tracking-wide text-t1">
                     {roadmapTitle}
                   </h1>
-                  <p className="builder-main-desc text-xs text-t2 mt-1">
-                    {roadmapDescription}
-                  </p>
+                  <p className="builder-main-desc text-xs text-t2 mt-1">{roadmapDescription}</p>
                 </div>
                 <button
                   onClick={() => {
@@ -212,10 +240,12 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
               className="dropdown-select text-xxs font-black uppercase text-t2 bg-transparent border-none py-1 focus:outline-none"
               defaultValue=""
             >
-              <option value="" disabled>Import Base Path</option>
+              <option value="" disabled>
+                Import Base Path
+              </option>
               {Object.keys(roadmapData).map((key) => (
                 <option key={key} value={key}>
-                  {(roadmapData as any)[key].title}
+                  {typedRoadmapData[key].title}
                 </option>
               ))}
             </select>
@@ -252,14 +282,18 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
             <select
               onChange={(e) => {
                 const action = e.target.value;
-                if (action === 'svg') downloadSVG(roadmapTitle, roadmapDescription, nodes, activeTheme);
-                if (action === 'png') downloadPNG(roadmapTitle, roadmapDescription, nodes, activeTheme);
+                if (action === 'svg')
+                  downloadSVG(roadmapTitle, roadmapDescription, nodes, activeTheme);
+                if (action === 'png')
+                  downloadPNG(roadmapTitle, roadmapDescription, nodes, activeTheme);
                 e.target.value = ''; // Reset
               }}
               className="dropdown-select text-xxs font-black uppercase text-t2 bg-transparent border-none py-1 focus:outline-none"
               defaultValue=""
             >
-              <option value="" disabled>Export as Image</option>
+              <option value="" disabled>
+                Export as Image
+              </option>
               <option value="png">PNG Format</option>
               <option value="svg">SVG Vector</option>
             </select>
@@ -277,9 +311,15 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
       </header>
 
       {/* Main Workspace split panel layout */}
-      <div className="builder-split-workspace" style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}>
+      <div
+        className="builder-split-workspace"
+        style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}
+      >
         {/* Sidebar Accessibility Listing of nodes */}
-        <aside className="builder-sidebar glassmorphic-panel flex flex-col p-4 w-72 rounded-2xl flex-shrink-0 hide-on-mobile" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+        <aside
+          className="builder-sidebar glassmorphic-panel flex flex-col p-4 w-72 rounded-2xl flex-shrink-0 hide-on-mobile"
+          style={{ maxHeight: '72vh', overflowY: 'auto' }}
+        >
           <div className="flex items-center gap-2 border-b border-border-color pb-3 mb-4">
             <Layers size={15} className="text-brand-red" />
             <h2 className="text-xs font-black uppercase tracking-wider text-t1">
@@ -290,10 +330,22 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
           {nodes.length === 0 ? (
             <div className="text-center py-8 text-t3 text-xs">
               <AlertCircle size={20} className="mx-auto mb-2 opacity-50" />
-              Canvas is empty.<br />Add topics or load a template!
+              Canvas is empty.
+              <br />
+              Add topics or load a template!
             </div>
           ) : (
-            <ul className="sidebar-nodes-ul" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <ul
+              className="sidebar-nodes-ul"
+              style={{
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
               {nodes.map((n) => (
                 <li key={n.id}>
                   <button
@@ -305,13 +357,21 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
                       className="text-xxs font-black px-2 py-0.5 rounded-md uppercase"
                       style={{
                         backgroundColor:
-                          n.status === 'Completed' ? 'rgba(76, 175, 80, 0.1)' :
-                          n.status === 'In Progress' ? 'rgba(255, 193, 7, 0.1)' :
-                          n.status === 'Stuck' ? 'rgba(230, 57, 70, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                          n.status === 'Completed'
+                            ? 'rgba(76, 175, 80, 0.1)'
+                            : n.status === 'In Progress'
+                              ? 'rgba(255, 193, 7, 0.1)'
+                              : n.status === 'Stuck'
+                                ? 'rgba(230, 57, 70, 0.1)'
+                                : 'rgba(255, 255, 255, 0.05)',
                         color:
-                          n.status === 'Completed' ? '#4CAF50' :
-                          n.status === 'In Progress' ? '#FFC107' :
-                          n.status === 'Stuck' ? '#E63946' : 'var(--t3)'
+                          n.status === 'Completed'
+                            ? '#4CAF50'
+                            : n.status === 'In Progress'
+                              ? '#FFC107'
+                              : n.status === 'Stuck'
+                                ? '#E63946'
+                                : 'var(--t3)',
                       }}
                     >
                       {n.status === 'Not Started' ? 'New' : n.status.substring(0, 11)}
@@ -324,7 +384,10 @@ const RoadmapBuilderInner: React.FC<RoadmapBuilderInnerProps> = ({ onBack }) => 
         </aside>
 
         {/* Dynamic Drag-and-Drop canvas grid */}
-        <main className="canvas-container-outer glassmorphic-panel rounded-2xl flex-grow overflow-auto" style={{ maxHeight: '72vh' }}>
+        <main
+          className="canvas-container-outer glassmorphic-panel rounded-2xl flex-grow overflow-auto"
+          style={{ maxHeight: '72vh' }}
+        >
           <NodeCanvas theme={activeTheme} />
         </main>
       </div>

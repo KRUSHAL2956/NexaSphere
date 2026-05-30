@@ -1,94 +1,41 @@
 /**
- * Service Worker for NexaSphere PWA
- * Handles offline functionality and push notifications
+ * NexaSphere Custom Service Worker Additions
+ * ============================================
+ * This file is NOT the main service worker — Workbox (via vite-plugin-pwa)
+ * auto-generates the main sw. This file handles:
+ *
+ *  - Push notifications
+ *  - Notification click / close handling
+ *  - Background sync tag 'ns-bg-sync' — triggers app-side sync queue processing
+ *
+ * NOTE: The main Workbox SW handles all caching strategies (configured in vite.config.js).
+ * The old hand-rolled cache logic has been replaced by Workbox's production-grade caching.
  */
 
-const CACHE_NAME = 'nexasphere-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/src/main.jsx',
-  '/manifest.json',
-  '/pwa-192x192.png',
-  '/pwa-512x512.png',
-];
+// ── Background Sync ───────────────────────────────────────────────────────────
 
 /**
- * Install service worker and cache assets
+ * Background Sync event — triggered when connectivity is restored.
+ * Sends a message to all controlled clients to trigger the app-side sync queue.
  */
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache).catch((err) => {
-        console.log('Cache add error:', err);
-        // Don't fail install if some resources aren't available
-      });
-    })
-  );
-  self.skipWaiting();
-});
-
-/**
- * Activate service worker and clean old caches
- */
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
-});
-
-/**
- * Fetch event - use cache-first strategy
- */
-self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
-  // Skip WebSocket connections
-  if (event.request.url.includes('socket.io')) {
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
-
-      return fetch(event.request)
-        .then((response) => {
-          // Don't cache non-successful responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
-          return response;
-        })
-        .catch(() => {
-          // Return offline page if available
-          return caches.match('/offline.html');
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'ns-bg-sync') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: false }).then((clients) => {
+        if (clients.length === 0) {
+          console.log('[SW] No active clients to notify for sync.');
+          return;
+        }
+        clients.forEach((client) => {
+          client.postMessage({ type: 'NS_TRIGGER_SYNC' });
         });
-    })
-  );
+        console.log(`[SW] Background sync triggered — notified ${clients.length} client(s).`);
+      })
+    );
+  }
 });
+
+// ── Push Notifications ────────────────────────────────────────────────────────
 
 /**
  * Handle push notifications
@@ -99,8 +46,9 @@ self.addEventListener('push', (event) => {
     body: 'You have a new notification',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
-    tag: 'notification',
+    tag: 'nexasphere-notification',
     requireInteraction: false,
+    data: {},
   };
 
   if (event.data) {
@@ -110,18 +58,30 @@ self.addEventListener('push', (event) => {
         ...notificationData,
         title: data.notification?.title || notificationData.title,
         body: data.notification?.body || notificationData.body,
+        icon: data.notification?.icon || notificationData.icon,
         data: data.data || {},
       };
-    } catch (e) {
+    } catch {
       notificationData.body = event.data.text();
     }
   }
 
-  event.waitUntil(self.registration.showNotification(notificationData.title, notificationData));
+  event.waitUntil(
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      tag: notificationData.tag,
+      requireInteraction: notificationData.requireInteraction,
+      data: notificationData.data,
+    })
+  );
 });
 
+// ── Notification Interactions ─────────────────────────────────────────────────
+
 /**
- * Handle notification click
+ * Handle notification click — navigate to the relevant page
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
@@ -130,15 +90,13 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if URL is already open
-      for (let i = 0; i < clientList.length; i++) {
-        const client = clientList[i];
+      // Focus existing window if open on that URL
+      for (const client of clientList) {
         if (client.url === urlToOpen && 'focus' in client) {
           return client.focus();
         }
       }
-
-      // Open new window if not already open
+      // Otherwise open a new window
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
@@ -150,22 +108,17 @@ self.addEventListener('notificationclick', (event) => {
  * Handle notification close
  */
 self.addEventListener('notificationclose', (event) => {
-  console.log('Notification closed:', event.notification.tag);
+  console.log('[SW] Notification closed:', event.notification.tag);
 });
 
+// ── Message handler ───────────────────────────────────────────────────────────
+
 /**
- * Background sync for failed requests
+ * Respond to messages from the app
  */
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-events') {
-    event.waitUntil(
-      fetch('/api/events', { method: 'GET' })
-        .then(() => {
-          console.log('Background sync successful');
-        })
-        .catch((error) => {
-          console.error('Background sync failed:', error);
-        })
-    );
+self.addEventListener('message', (event) => {
+  // Skip waiting — allows new SW to activate immediately when client requests it
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });

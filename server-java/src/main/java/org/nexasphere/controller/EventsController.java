@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -40,11 +41,13 @@ public class EventsController {
 
     @PutMapping("/{id}")
     public ResponseEntity<EventEntity> update(@PathVariable String id, @Valid @RequestBody EventEntity event) {
-        return repo.findById(id).map(existing -> {
-            event.setId(id);
+        String safeId = Objects.requireNonNull(id, "id must not be null");
+        return repo.findById(safeId).map(existing -> {
+            event.setId(safeId);
             event.setName(sanitizer.clean(event.getName()));
-            return ResponseEntity.ok(repo.save(event));
-        }).orElse(ResponseEntity.notFound().build());
+            EventEntity saved = repo.save(event);
+            return ResponseEntity.ok(saved);
+        }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")

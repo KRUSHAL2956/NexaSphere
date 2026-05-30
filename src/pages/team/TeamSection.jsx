@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import apiClient from '../../utils/apiClient.js';
 import { createPortal } from 'react-dom';
 import TeamMemberModal from './TeamMemberModal';
 import { IconArrowRight, IconSpark } from '../../shared/Icons';
@@ -8,43 +9,64 @@ function MemberCard({ member, idx, onClick }) {
   const [imgError, setImgError] = useState(false);
   const agDelay = [-0.0, -2.1, -4.2, -1.0, -3.3, -5.5, -0.7, -6.1, -2.8, -4.9, -1.6, -3.8];
 
-  const onMove = e => {
-    const c = ref.current; if (!c) return;
+  const onMove = (e) => {
+    const c = ref.current;
+    if (!c) return;
     const rect = c.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - .5;
-    const y = (e.clientY - rect.top) / rect.height - .5;
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
     c.style.animationPlayState = 'paused';
     c.style.transform = `translateY(-14px) rotateX(${-y * 18}deg) rotateY(${x * 18}deg) scale(1.06)`;
   };
   const onLeave = () => {
-    const c = ref.current; if (!c) return;
-    c.style.transform = ''; c.style.animationPlayState = '';
+    const c = ref.current;
+    if (!c) return;
+    c.style.transform = '';
+    c.style.animationPlayState = '';
   };
   const click = () => {
     const c = ref.current;
-    if (c) { c.style.transform = 'scale(.9)'; setTimeout(() => { c.style.transform = ''; }, 140); }
+    if (c) {
+      c.style.transform = 'scale(.9)';
+      setTimeout(() => {
+        c.style.transform = '';
+      }, 140);
+    }
     setTimeout(() => onClick(member), 110);
   };
 
   return (
-    <div ref={ref}
+    <div
+      ref={ref}
       className="team-card shimmer mag-card"
       style={{
-        cursor: 'pointer', perspective: '800px',
+        cursor: 'pointer',
+        perspective: '800px',
         animation: `ag 7s ease-in-out ${agDelay[idx % 12]}s infinite`,
         willChange: 'transform',
         animationFillMode: 'both',
         opacity: 1,
       }}
-      onMouseMove={onMove} onMouseLeave={onLeave} onClick={click}
-      role="button" tabIndex={0}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') click(); }}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      onClick={click}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') click();
+      }}
     >
       <div className="team-card-photo-wrap">
-        <img 
-          src={(!member.photo || imgError) ? 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(member.name) + '&backgroundColor=7b6fff&textColor=ffffff' : member.photo} 
-          alt={member.name} 
-          className="team-card-photo" 
+        <img
+          src={
+            !member.photo || imgError
+              ? 'https://api.dicebear.com/7.x/initials/svg?seed=' +
+                encodeURIComponent(member.name) +
+                '&backgroundColor=7b6fff&textColor=ffffff'
+              : member.photo
+          }
+          alt={member.name}
+          className="team-card-photo"
           onError={() => setImgError(true)}
         />
       </div>
@@ -55,7 +77,8 @@ function MemberCard({ member, idx, onClick }) {
         <span className="chip-section">§{member.section}</span>
       </div>
       <div className="team-card-hint">Click to view ↗</div>
-      <div className="corner-tl" /><div className="corner-br" />
+      <div className="corner-tl" />
+      <div className="corner-br" />
     </div>
   );
 }
@@ -68,47 +91,64 @@ export default function TeamSection({ onApply }) {
     let alive = true;
     const base = (import.meta?.env?.VITE_API_BASE || '').replace(/\/+$/, '');
     const url = base ? `${base}/api/content/team` : '/api/content/team';
-    
-    fetch(url)
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(data => {
+
+    apiClient(url)
+      .then((data) => {
         if (!alive) return;
         if (Array.isArray(data?.members)) {
           setMembers(data.members);
         }
       })
       .catch(() => {});
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
-    const elements = document.querySelectorAll('#section-team .pop-flip, #section-team .pop-in, #section-team .pop-word');
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (e.isIntersecting && !e.target.classList.contains('fired')) {
-          e.target.classList.add('fired');
-          e.target.addEventListener('animationend', () => {
-            e.target.style.opacity = '1';
-            e.target.style.transform = 'none';
-          }, { once: true });
-          obs.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0, rootMargin: '0px 0px -10px 0px' });
-    elements.forEach(el => obs.observe(el));
+    const elements = document.querySelectorAll(
+      '#section-team .pop-flip, #section-team .pop-in, #section-team .pop-word'
+    );
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting && !e.target.classList.contains('fired')) {
+            e.target.classList.add('fired');
+            e.target.addEventListener(
+              'animationend',
+              () => {
+                e.target.style.opacity = '1';
+                e.target.style.transform = 'none';
+              },
+              { once: true }
+            );
+            obs.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0, rootMargin: '0px 0px -10px 0px' }
+    );
+    elements.forEach((el) => obs.observe(el));
     const fallback = setTimeout(() => {
-      elements.forEach(el => {
+      elements.forEach((el) => {
         const rect = el.getBoundingClientRect();
         if (rect.top < window.innerHeight + 100 && !el.classList.contains('fired')) {
           el.classList.add('fired');
-          el.addEventListener('animationend', () => {
-            el.style.opacity = '1';
-            el.style.transform = 'none';
-          }, { once: true });
+          el.addEventListener(
+            'animationend',
+            () => {
+              el.style.opacity = '1';
+              el.style.transform = 'none';
+            },
+            { once: true }
+          );
         }
       });
     }, 120);
-    return () => { obs.disconnect(); clearTimeout(fallback); };
+    return () => {
+      obs.disconnect();
+      clearTimeout(fallback);
+    };
   }, []);
 
   return (
@@ -117,24 +157,56 @@ export default function TeamSection({ onApply }) {
         <div className="section-heading">
           <span className="cin-section-label pop-in">GL Bajaj Group of Institutions · Mathura</span>
           <h2 className="section-title pop-word">Core Team</h2>
-          <p className="section-subtitle pop-in" style={{ animationDelay: '.1s' }}>The Minds Behind NexaSphere</p>
+          <p className="section-subtitle pop-in" style={{ animationDelay: '.1s' }}>
+            The Minds Behind NexaSphere
+          </p>
         </div>
 
         <div className="team-grid cin-container">
-          {members.map((m, i) => <MemberCard key={m.id} member={m} idx={i} onClick={setSel} />)}
+          {members.map((m, i) => (
+            <MemberCard key={m.id} member={m} idx={i} onClick={setSel} />
+          ))}
         </div>
 
-
-        <div className="ns-reveal-scale" style={{
-          textAlign: 'center', marginTop: '56px', padding: '28px',
-          background: 'var(--card)', border: '1px solid var(--bdr)',
-          borderRadius: 'var(--r3)', maxWidth: '520px', margin: '56px auto 0',
-          position: 'relative', overflow: 'hidden',
-        }}>
-          <div className="corner-tl" /><div className="corner-br" />
-          <h3 style={{ fontFamily: 'Orbitron,monospace', fontSize: '1rem', fontWeight: 700, color: 'var(--c1)', marginBottom: '8px', letterSpacing: '.05em' }}>Want to Join NexaSphere?</h3>
-          <p style={{ color: 'var(--t2)', fontSize: '.88rem', marginBottom: '18px', lineHeight: 1.65 }}>
-            We&apos;re looking for passionate students to drive NexaSphere forward. Fill in the form and we&apos;ll reach out!
+        <div
+          className="ns-reveal-scale"
+          style={{
+            textAlign: 'center',
+            marginTop: '56px',
+            padding: '28px',
+            background: 'var(--card)',
+            border: '1px solid var(--bdr)',
+            borderRadius: 'var(--r3)',
+            maxWidth: '520px',
+            margin: '56px auto 0',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div className="corner-tl" />
+          <div className="corner-br" />
+          <h3
+            style={{
+              fontFamily: 'Orbitron,monospace',
+              fontSize: '1rem',
+              fontWeight: 700,
+              color: 'var(--c1)',
+              marginBottom: '8px',
+              letterSpacing: '.05em',
+            }}
+          >
+            Want to Join NexaSphere?
+          </h3>
+          <p
+            style={{
+              color: 'var(--t2)',
+              fontSize: '.88rem',
+              marginBottom: '18px',
+              lineHeight: 1.65,
+            }}
+          >
+            We&apos;re looking for passionate students to drive NexaSphere forward. Fill in the form
+            and we&apos;ll reach out!
           </p>
           <button
             type="button"
@@ -151,4 +223,3 @@ export default function TeamSection({ onApply }) {
     </section>
   );
 }
-

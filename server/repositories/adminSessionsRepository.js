@@ -4,9 +4,13 @@ import { withDb } from './db.js';
 
 const DEFAULT_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const DEFAULT_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+const DEFAULT_TOUCH_THROTTLE_MS = 60 * 1000; // 1 minute default
 
 let schemaReady = null;
 let cleanupTimer = null;
+
+// Bounded in-memory map to throttle last_seen_at updates (prevents MVCC bloat & lock storms)
+const lastSeenThrottleMap = new Map();
 
 function getSessionTtlMs() {
   const value = Number(process.env.ADMIN_SESSION_TTL_MS);
@@ -16,6 +20,11 @@ function getSessionTtlMs() {
 function getCleanupIntervalMs() {
   const value = Number(process.env.ADMIN_SESSION_CLEANUP_INTERVAL_MS);
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_CLEANUP_INTERVAL_MS;
+}
+
+function getTouchThrottleMs() {
+  const value = Number(process.env.ADMIN_SESSION_TOUCH_THROTTLE_MS);
+  return Number.isFinite(value) && value >= 0 ? value : DEFAULT_TOUCH_THROTTLE_MS;
 }
 
 function hashToken(token) {
@@ -59,8 +68,12 @@ async function ensureSchema(client) {
     )
   `);
 
-  await client.query('create index if not exists idx_admin_sessions_expires_at on admin_sessions (expires_at)');
-  await client.query('create index if not exists idx_admin_sessions_revoked_at on admin_sessions (revoked_at)');
+  await client.query(
+    'create index if not exists idx_admin_sessions_expires_at on admin_sessions (expires_at)'
+  );
+  await client.query(
+    'create index if not exists idx_admin_sessions_revoked_at on admin_sessions (revoked_at)'
+  );
 }
 
 async function ensureReady() {
@@ -75,7 +88,7 @@ async function ensureReady() {
 
 export async function createAdminSession({ username, metadata = {} }) {
   await ensureReady();
-  
+
   // Force await cleanup on new sessions to guarantee cleanup under serverless starts
   await triggerLazyCleanup(true);
 
@@ -126,13 +139,38 @@ export async function getAdminSession(token) {
     );
 
     if (!rows.length) {
-      await client.query('delete from admin_sessions where token_hash = $1 and (expires_at <= now() or revoked_at is not null)', [tokenHash]);
+      lastSeenThrottleMap.delete(tokenHash);
+      await client.query(
+        'delete from admin_sessions where token_hash = $1 and (expires_at <= now() or revoked_at is not null)',
+        [tokenHash]
+      );
       return null;
     }
 
-    await client.query('update admin_sessions set last_seen_at = now() where token_hash = $1', [tokenHash]);
-
     const row = rows[0];
+    const nowMs = Date.now();
+    const lastUpdate = lastSeenThrottleMap.get(tokenHash);
+    const throttleMs = getTouchThrottleMs();
+
+    if (!lastUpdate || nowMs - lastUpdate >= throttleMs) {
+      lastSeenThrottleMap.set(tokenHash, nowMs);
+
+      // Async non-blocking deferred persistence: execute outside the request query thread context
+      withDb(async (dbClient) => {
+        await dbClient.query(
+          'update admin_sessions set last_seen_at = now() where token_hash = $1',
+          [tokenHash]
+        );
+      }).catch((error) => {
+        console.error('Failed to update admin session last_seen_at asynchronously:', error);
+      });
+    }
+
+    // Bounded memory defense: safeguard map from unbounded growth in extreme production environments
+    if (lastSeenThrottleMap.size > 1000) {
+      lastSeenThrottleMap.clear();
+    }
+
     return {
       token: token,
       username: row.username,
@@ -152,6 +190,8 @@ export async function revokeAdminSession(token) {
   await triggerLazyCleanup(true);
 
   const tokenHash = hashToken(token);
+  lastSeenThrottleMap.delete(tokenHash);
+
   return withDb(async (client) => {
     const { rowCount } = await client.query(
       'update admin_sessions set revoked_at = now() where token_hash = $1 and revoked_at is null',
@@ -163,6 +203,7 @@ export async function revokeAdminSession(token) {
 
 export async function cleanupExpiredAdminSessions() {
   await ensureReady();
+  lastSeenThrottleMap.clear(); // Prune all throttled session updates to free memory
 
   return withDb(async (client) => {
     const { rowCount } = await client.query(
@@ -185,7 +226,9 @@ export function startAdminSessionCleanup() {
   );
 
   if (isServerless) {
-    console.log('[Admin Session Cleanup] Serverless environment detected. Skipping background interval timer.');
+    console.log(
+      '[Admin Session Cleanup] Serverless environment detected. Skipping background interval timer.'
+    );
     return null;
   }
 

@@ -12,6 +12,8 @@ export function useSocket(serverUrl) {
   const [socketId, setSocketId] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Initialize socket connection if not already done
     const base = serverUrl || getSocketServerUrl();
     const socket = socketClient.initializeSocket(base);
@@ -47,7 +49,6 @@ export function useSocket(serverUrl) {
       socket.off('disconnect', onDisconnect);
     };
   }, [serverUrl]);
-
 
   /**
    * Identify authenticated user to the WebSocket room
@@ -86,7 +87,6 @@ export function useSocket(serverUrl) {
   const off = useCallback((eventName, handler) => {
     socketClient.off(eventName, handler);
   }, []);
-
 
   /**
    * Emit event to the socket server

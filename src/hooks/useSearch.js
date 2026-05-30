@@ -10,10 +10,30 @@ function useDebounce(value, delay = 300) {
   return debouncedValue;
 }
 
+function matchesText(value, query) {
+  return typeof value === 'string' && value.toLowerCase().includes(query);
+}
+
+export function getEventDisplayTitle(event) {
+  return event?.title || event?.name || event?.shortName || '';
+}
+
+export function eventMatchesQuery(event, query) {
+  return (
+    matchesText(event?.title, query) ||
+    matchesText(event?.name, query) ||
+    matchesText(event?.shortName, query) ||
+    matchesText(event?.description, query) ||
+    matchesText(event?.category, query) ||
+    matchesText(event?.location, query) ||
+    event?.tags?.some?.((tag) => matchesText(tag, query))
+  );
+}
+
 /* Main search hook */
 export function useSearch(activities, events) {
-  const [query,   setQuery]   = useState('');
-  const [filter,  setFilter]  = useState('all'); // 'all' | 'activities' | 'events'
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all'); // 'all' | 'activities' | 'events'
   const [results, setResults] = useState([]);
   const debouncedQuery = useDebounce(query, 300);
 
@@ -29,17 +49,18 @@ export function useSearch(activities, events) {
     /* Search activities */
     if (filter === 'all' || filter === 'activities') {
       const actRes = Object.entries(activities || {})
-        .filter(([key, a]) =>
-          key.toLowerCase().includes(q) ||
-          a?.title?.toLowerCase().includes(q) ||
-          a?.description?.toLowerCase().includes(q) ||
-          a?.subtitle?.toLowerCase().includes(q) ||
-          a?.tagline?.toLowerCase().includes(q)
+        .filter(
+          ([key, a]) =>
+            key.toLowerCase().includes(q) ||
+            a?.title?.toLowerCase().includes(q) ||
+            a?.description?.toLowerCase().includes(q) ||
+            a?.subtitle?.toLowerCase().includes(q) ||
+            a?.tagline?.toLowerCase().includes(q)
         )
         .map(([key, a]) => ({
-          id:          key,
-          type:        'activity',
-          title:       a?.title || key,
+          id: key,
+          type: 'activity',
+          title: a?.title || key,
           description: a?.description || a?.subtitle || a?.tagline || '',
           key,
         }));
@@ -49,21 +70,19 @@ export function useSearch(activities, events) {
     /* Search events */
     if (filter === 'all' || filter === 'events') {
       const evRes = (events || [])
-        .filter(ev =>
-          ev?.title?.toLowerCase().includes(q) ||
-          ev?.description?.toLowerCase().includes(q) ||
-          ev?.category?.toLowerCase().includes(q) ||
-          ev?.location?.toLowerCase().includes(q) ||
-          ev?.tags?.some?.(t => t.toLowerCase().includes(q))
-        )
-        .map(ev => ({
-          id:          ev.id || ev.title,
-          type:        'event',
-          title:       ev.title,
-          description: ev.description || ev.location || '',
-          date:        ev.date,
-          event:       ev,
-        }));
+        .filter((ev) => eventMatchesQuery(ev, q))
+        .map((ev) => {
+          const title = getEventDisplayTitle(ev);
+
+          return {
+            id: ev.id || title,
+            type: 'event',
+            title,
+            description: ev.description || ev.location || '',
+            date: ev.date,
+            event: ev,
+          };
+        });
       all = [...all, ...evRes];
     }
 

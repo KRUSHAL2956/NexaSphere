@@ -1,0 +1,100 @@
+name: GSSoC — Issue Validate
+
+# ─────────────────────────────────────────────────────────────────────────────
+# When an issue is opened or edited, validates it has required sections.
+# Flags incomplete issues with a label and guidance comment.
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: issue-validate-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-issue:
+    name: Validate Issue Structure
+    runs-on: ubuntu-latest
+    if: >-
+      !endsWith(github.event.issue.user.login, '[bot]')
+    permissions:
+      issues: write
+
+    steps:
+      - name: Validate issue body sections
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const issue    = context.payload.issue;
+            const issueNum = issue.number;
+            const body     = issue.body || '';
+            const author   = issue.user.login;
+
+            // ── Skip bots ─────────────────────────────────────────────────────
+            if (author.endsWith('[bot]')) {
+              console.log('⏭️  Skipping bot-created issue');
+              return;
+            }
+
+            // ── Label helpers ─────────────────────────────────────────────────
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (e) {
+                if (e.status === 404) {
+                  await github.rest.issues.createLabel({ owner, repo, name, color, description });
+                }
+              }
+            }
+            async function addLabel(name) {
+              await github.rest.issues.addLabels({ owner, repo, issue_number: issueNum, labels: [name] });
+            }
+            async function removeLabel(name) {
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNum, name });
+              } catch (_) {}
+            }
+
+            await ensureLabel('needs-more-info', 'e4e669', 'Issue needs more information from the author');
+            await ensureLabel('valid-issue',     '0e8a16', 'Issue has all required information');
+
+            // ── Define required sections ──────────────────────────────────────
+            const REQUIRED_SECTIONS = [
+              { pattern: /##?\s*description/i,           label: '**Description** — What is the issue?' },
+              { pattern: /##?\s*steps\s+to\s+reproduce/i, label: '**Steps to Reproduce** — How can we reproduce the issue?' },
+              { pattern: /##?\s*expected\s+behav/i,      label: '**Expected Behavior** — What should happen?' },
+            ];
+
+            const missing = REQUIRED_SECTIONS
+              .filter(s => !s.pattern.test(body))
+              .map(s => `- ❌ Missing: ${s.label}`);
+
+            // ── Post result ───────────────────────────────────────────────────
+            if (missing.length > 0) {
+              await removeLabel('valid-issue');
+              await addLabel('needs-more-info');
+
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issueNum,
+                body: [
+                  `## ⚠️ Issue Needs More Information`,
+                  ``,
+                  `Hey @${author}! Your issue is missing some required sections:`,
+                  ``,
+                  missing.join('\n'),
+                  ``,
+                  `**Please edit your issue** to include these sections for faster triage.`,
+                  `You can use our [bug report template](https://github.com/${owner}/${repo}/blob/main/.github/ISSUE_TEMPLATE/bug_report.md) as a guide.`,
+                  ``,
+                  `_GSSoC'26 automation · Mentor: [@Ayushh-Sharmaa](https://github.com/Ayushh-Sharmaa)_`,
+                ].join('\n'),
+              });
+              console.log(`⚠️  Issue #${issueNum} flagged: missing ${missing.length} section(s)`);
+            } else {
+              await removeLabel('needs-more-info');
+              await addLabel('valid-issue');
+              console.log(`✅ Issue #${issueNum} passed structure validation`);
+            }

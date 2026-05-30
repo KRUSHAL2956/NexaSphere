@@ -4,13 +4,16 @@ import { RoadmapNode } from '../context/RoadmapBuilderContext';
  * Validates a parsed JSON object to ensure it strictly matches the Roadmap schema.
  * Throws a specific descriptive error if anything is malformed.
  */
-export const validateRoadmapJSON = (data: any): { title: string; description: string; nodes: RoadmapNode[] } => {
+export const validateRoadmapJSON = (
+  data: any
+): { title: string; description: string; nodes: RoadmapNode[] } => {
   if (!data || typeof data !== 'object') {
     throw new Error('Import failed: Data is not a valid JSON object.');
   }
 
   const title = typeof data.title === 'string' ? data.title : 'Imported Custom Path';
-  const description = typeof data.description === 'string' ? data.description : 'Custom imported path.';
+  const description =
+    typeof data.description === 'string' ? data.description : 'Custom imported path.';
 
   if (!data.nodes || !Array.isArray(data.nodes)) {
     throw new Error('Import failed: The file must contain a "nodes" array.');
@@ -20,16 +23,22 @@ export const validateRoadmapJSON = (data: any): { title: string; description: st
 
   data.nodes.forEach((node: any, index: number) => {
     if (!node.id || typeof node.id !== 'string') {
-      throw new Error(`Node validation failed at index ${index}: "id" is missing or is not a string.`);
+      throw new Error(
+        `Node validation failed at index ${index}: "id" is missing or is not a string.`
+      );
     }
     if (!node.title || typeof node.title !== 'string') {
-      throw new Error(`Node validation failed (ID: ${node.id || index}): "title" is missing or is not a string.`);
+      throw new Error(
+        `Node validation failed (ID: ${node.id || index}): "title" is missing or is not a string.`
+      );
     }
     if (typeof node.description !== 'string') {
       node.description = '';
     }
     if (typeof node.x !== 'number' || typeof node.y !== 'number') {
-      throw new Error(`Node validation failed (ID: ${node.id}): Coordinates "x" or "y" must be numbers.`);
+      throw new Error(
+        `Node validation failed (ID: ${node.id}): Coordinates "x" or "y" must be numbers.`
+      );
     }
 
     const validStatuses = ['Not Started', 'In Progress', 'Completed', 'Stuck'];
@@ -41,7 +50,9 @@ export const validateRoadmapJSON = (data: any): { title: string; description: st
 
     const resources = (node.resources || []).map((r: any, rIdx: number) => {
       if (!r.title || typeof r.title !== 'string' || !r.url || typeof r.url !== 'string') {
-        throw new Error(`Node "${node.title}" resource at index ${rIdx} is malformed. Resources need a "title" and a "url".`);
+        throw new Error(
+          `Node "${node.title}" resource at index ${rIdx} is malformed. Resources need a "title" and a "url".`
+        );
       }
       return { title: r.title, url: r.url };
     });
@@ -61,7 +72,7 @@ export const validateRoadmapJSON = (data: any): { title: string; description: st
       status: status as any,
       notes: typeof node.notes === 'string' ? node.notes : '',
       resources,
-      prerequisites
+      prerequisites,
     });
   });
 
@@ -70,7 +81,7 @@ export const validateRoadmapJSON = (data: any): { title: string; description: st
   const visited = new Set<string>();
   const adj = new Map<string, string[]>();
 
-  validatedNodes.forEach(node => adj.set(node.id, node.prerequisites));
+  validatedNodes.forEach((node) => adj.set(node.id, node.prerequisites));
 
   const hasCycle = (nodeId: string): boolean => {
     visiting.add(nodeId);
@@ -89,7 +100,9 @@ export const validateRoadmapJSON = (data: any): { title: string; description: st
   for (const node of validatedNodes) {
     if (!visited.has(node.id)) {
       if (hasCycle(node.id)) {
-        throw new Error('Validation failed: The imported roadmap contains circular prerequisite dependencies (loops).');
+        throw new Error(
+          'Validation failed: The imported roadmap contains circular prerequisite dependencies (loops).'
+        );
       }
     }
   }
@@ -123,12 +136,18 @@ export const buildStandaloneSVG = (
   theme: 'dark' | 'light'
 ): string => {
   // 1. Calculate boundaries of the canvas
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
 
   if (nodes.length === 0) {
-    minX = 100; minY = 100; maxX = 500; maxY = 300;
+    minX = 100;
+    minY = 100;
+    maxX = 500;
+    maxY = 300;
   } else {
-    nodes.forEach(n => {
+    nodes.forEach((n) => {
       if (n.x < minX) minX = n.x;
       if (n.y < minY) minY = n.y;
       if (n.x > maxX) maxX = n.x;
@@ -152,18 +171,22 @@ export const buildStandaloneSVG = (
   // Style helper for nodes status
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'In Progress': return '#FFC107'; // amber
-      case 'Completed': return '#4CAF50'; // emerald
-      case 'Stuck': return '#E63946'; // ruby
-      default: return theme === 'dark' ? '#6B6B6B' : '#8A8A8A';
+      case 'In Progress':
+        return '#FFC107'; // amber
+      case 'Completed':
+        return '#4CAF50'; // emerald
+      case 'Stuck':
+        return '#E63946'; // ruby
+      default:
+        return theme === 'dark' ? '#6B6B6B' : '#8A8A8A';
     }
   };
 
   // Compile SVGs and Lines
   let linePaths = '';
-  nodes.forEach(node => {
-    node.prerequisites.forEach(preId => {
-      const fromNode = nodes.find(n => n.id === preId);
+  nodes.forEach((node) => {
+    node.prerequisites.forEach((preId) => {
+      const fromNode = nodes.find((n) => n.id === preId);
       if (fromNode) {
         // Center offsets
         const x1 = fromNode.x + 110 - minX;
@@ -181,7 +204,7 @@ export const buildStandaloneSVG = (
   });
 
   let nodeCards = '';
-  nodes.forEach(node => {
+  nodes.forEach((node) => {
     const rx = node.x - minX;
     const ry = node.y - minY;
     const statusColor = getStatusColor(node.status);
@@ -189,7 +212,12 @@ export const buildStandaloneSVG = (
 
     // Safe XML text
     const safeTitle = node.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const safeDesc = node.description.substring(0, 80).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + (node.description.length > 80 ? '...' : '');
+    const safeDesc =
+      node.description
+        .substring(0, 80)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;') + (node.description.length > 80 ? '...' : '');
 
     nodeCards += `
       <g transform="translate(${rx}, ${ry})">
@@ -234,8 +262,8 @@ export const buildStandaloneSVG = (
       
       <!-- Title Block -->
       <g transform="translate(40, 50)">
-        <text x="0" y="0" font-family="'Orbitron', sans-serif" font-weight="900" font-size="24" fill="${textHex}">${title.replace(/&/g, '&amp;')}</text>
-        <text x="0" y="24" font-family="sans-serif" font-size="12" fill="${descHex}">${description.replace(/&/g, '&amp;')}</text>
+        <text x="0" y="0" font-family="'Orbitron', sans-serif" font-weight="900" font-size="24" fill="${textHex}">${title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+        <text x="0" y="24" font-family="sans-serif" font-size="12" fill="${descHex}">${description.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
       </g>
       
       <!-- Graph content offset below title -->
@@ -255,7 +283,12 @@ export const buildStandaloneSVG = (
 /**
  * Triggers client-side browser download of vector SVG image.
  */
-export const downloadSVG = (title: string, description: string, nodes: RoadmapNode[], theme: 'dark' | 'light') => {
+export const downloadSVG = (
+  title: string,
+  description: string,
+  nodes: RoadmapNode[],
+  theme: 'dark' | 'light'
+) => {
   const svgStr = buildStandaloneSVG(title, description, nodes, theme);
   const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(svgBlob);
@@ -271,7 +304,12 @@ export const downloadSVG = (title: string, description: string, nodes: RoadmapNo
 /**
  * Converts roadmap SVG to a rasterized PNG file and downloads it in the user's browser.
  */
-export const downloadPNG = (title: string, description: string, nodes: RoadmapNode[], theme: 'dark' | 'light') => {
+export const downloadPNG = (
+  title: string,
+  description: string,
+  nodes: RoadmapNode[],
+  theme: 'dark' | 'light'
+) => {
   const svgStr = buildStandaloneSVG(title, description, nodes, theme);
 
   // Parse width and height from the SVG

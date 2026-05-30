@@ -15,16 +15,17 @@
 
 import { useState } from 'react';
 
-const API_BASE = import.meta?.env?.VITE_PYTHON_API_BASE?.replace(/\/+$/, '') || 'http://localhost:8000';
+const API_BASE =
+  import.meta?.env?.VITE_PYTHON_API_BASE?.replace(/\/+$/, '') || 'http://localhost:8000';
 const ADMIN_SECRET = import.meta?.env?.VITE_ADMIN_SECRET || 'nexasphere-admin-secret';
 
 function parseStudents(rawText) {
   return rawText
     .split('\n')
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean)
     .map((line, idx) => {
-      const parts = line.split(',').map(p => p.trim());
+      const parts = line.split(',').map((p) => p.trim());
       return {
         student_id: parts[0] || `student-${idx + 1}`,
         student_name: parts.slice(1).join(' ').trim() || parts[0] || `Student ${idx + 1}`,
@@ -43,25 +44,29 @@ function CertRow({ cert }) {
   };
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr auto',
-      gap: '12px',
-      alignItems: 'center',
-      padding: '10px 14px',
-      background: 'rgba(34,197,94,0.04)',
-      borderRadius: '8px',
-      border: '1px solid rgba(34,197,94,0.12)',
-      marginBottom: '6px',
-      fontSize: '0.85rem',
-    }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr auto',
+        gap: '12px',
+        alignItems: 'center',
+        padding: '10px 14px',
+        background: 'rgba(34,197,94,0.04)',
+        borderRadius: '8px',
+        border: '1px solid rgba(34,197,94,0.12)',
+        marginBottom: '6px',
+        fontSize: '0.85rem',
+      }}
+    >
       <div>
         <div style={{ fontWeight: 600, color: '#fff' }}>{cert.student_name}</div>
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', fontFamily: 'monospace' }}>
+        <div
+          style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.72rem', fontFamily: 'monospace' }}
+        >
           {cert.certificate_id}
         </div>
       </div>
-      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', wordBreak: 'break-all' }}>
+      <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.78rem', wordBreak: 'break-all' }}>
         {cert.verification_url}
       </div>
       <button
@@ -70,7 +75,7 @@ function CertRow({ cert }) {
         style={{
           background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.07)',
           border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.12)'}`,
-          color: copied ? '#22c55e' : 'rgba(255,255,255,0.6)',
+          color: copied ? '#22c55e' : 'rgba(255,255,255,0.72)',
           borderRadius: '6px',
           padding: '6px 10px',
           cursor: 'pointer',
@@ -150,12 +155,31 @@ export function CertificateManager() {
       <div style={{ maxWidth: '760px' }}>
         {/* Event Details */}
         <section style={{ marginBottom: '28px' }}>
-          <h3 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.6 }}>
+          <h3
+            style={{
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              marginBottom: '14px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              opacity: 0.6,
+            }}
+          >
             Event Details
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '12px',
+              marginBottom: '12px',
+            }}
+          >
             <div>
-              <label htmlFor="cert-event-id" style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', opacity: 0.7 }}>
+              <label
+                htmlFor="cert-event-id"
+                style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', opacity: 0.7 }}
+              >
                 Event ID *
               </label>
               <input
@@ -163,13 +187,16 @@ export function CertificateManager() {
                 type="text"
                 placeholder="e.g. kss-153"
                 value={eventId}
-                onChange={e => setEventId(e.target.value)}
+                onChange={(e) => setEventId(e.target.value)}
                 className="form-input"
                 style={{ width: '100%' }}
               />
             </div>
             <div>
-              <label htmlFor="cert-event-date" style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', opacity: 0.7 }}>
+              <label
+                htmlFor="cert-event-date"
+                style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', opacity: 0.7 }}
+              >
                 Event Date *
               </label>
               <input
@@ -177,14 +204,17 @@ export function CertificateManager() {
                 type="text"
                 placeholder="e.g. March 15, 2025"
                 value={eventDate}
-                onChange={e => setEventDate(e.target.value)}
+                onChange={(e) => setEventDate(e.target.value)}
                 className="form-input"
                 style={{ width: '100%' }}
               />
             </div>
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label htmlFor="cert-event-name" style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', opacity: 0.7 }}>
+            <label
+              htmlFor="cert-event-name"
+              style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', opacity: 0.7 }}
+            >
               Event Name *
             </label>
             <input
@@ -192,19 +222,22 @@ export function CertificateManager() {
               type="text"
               placeholder="e.g. Knowledge Sharing Session #153"
               value={eventName}
-              onChange={e => setEventName(e.target.value)}
+              onChange={(e) => setEventName(e.target.value)}
               className="form-input"
               style={{ width: '100%' }}
             />
           </div>
           <div>
-            <label htmlFor="cert-template-style" style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', opacity: 0.7 }}>
+            <label
+              htmlFor="cert-template-style"
+              style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', opacity: 0.7 }}
+            >
               Certificate Style
             </label>
             <select
               id="cert-template-style"
               value={templateStyle}
-              onChange={e => setTemplateStyle(e.target.value)}
+              onChange={(e) => setTemplateStyle(e.target.value)}
               className="form-input"
               style={{ width: '200px' }}
             >
@@ -217,7 +250,16 @@ export function CertificateManager() {
 
         {/* Students */}
         <section style={{ marginBottom: '28px' }}>
-          <h3 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.6 }}>
+          <h3
+            style={{
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              marginBottom: '6px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              opacity: 0.6,
+            }}
+          >
             Students
           </h3>
           <p style={{ fontSize: '0.78rem', opacity: 0.5, marginBottom: '10px' }}>
@@ -227,9 +269,9 @@ export function CertificateManager() {
             id="cert-students"
             aria-label="Student list"
             rows={8}
-            placeholder={"STU001, Anshika Rai\nSTU002, Ayush Sharma\nSTU003, Riya Singh"}
+            placeholder={'STU001, Anshika Rai\nSTU002, Ayush Sharma\nSTU003, Riya Singh'}
             value={studentsRaw}
-            onChange={e => setStudentsRaw(e.target.value)}
+            onChange={(e) => setStudentsRaw(e.target.value)}
             className="form-input"
             style={{ width: '100%', fontFamily: 'monospace', resize: 'vertical' }}
           />
@@ -240,15 +282,17 @@ export function CertificateManager() {
 
         {/* Error */}
         {error && (
-          <div style={{
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.25)',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            color: '#f87171',
-            fontSize: '0.85rem',
-            marginBottom: '16px',
-          }}>
+          <div
+            style={{
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              color: '#f87171',
+              fontSize: '0.85rem',
+              marginBottom: '16px',
+            }}
+          >
             {error}
           </div>
         )}
@@ -267,26 +311,40 @@ export function CertificateManager() {
         {/* Results */}
         {result && (
           <div style={{ marginTop: '28px' }}>
-            <div style={{
-              background: 'rgba(34,197,94,0.07)',
-              border: '1px solid rgba(34,197,94,0.2)',
-              borderRadius: '10px',
-              padding: '14px 18px',
-              marginBottom: '16px',
-              display: 'flex',
-              gap: '24px',
-              fontSize: '0.88rem',
-            }}>
-              <span style={{ color: '#22c55e', fontWeight: 700 }}>✓ Generated: {result.generated}</span>
+            <div
+              style={{
+                background: 'rgba(34,197,94,0.07)',
+                border: '1px solid rgba(34,197,94,0.2)',
+                borderRadius: '10px',
+                padding: '14px 18px',
+                marginBottom: '16px',
+                display: 'flex',
+                gap: '24px',
+                fontSize: '0.88rem',
+              }}
+            >
+              <span style={{ color: '#22c55e', fontWeight: 700 }}>
+                ✓ Generated: {result.generated}
+              </span>
               {result.skipped > 0 && (
-                <span style={{ color: 'rgba(255,255,255,0.4)' }}>⟳ Skipped (already issued): {result.skipped}</span>
+                <span style={{ color: 'rgba(255,255,255,0.72)' }}>
+                  ⟳ Skipped (already issued): {result.skipped}
+                </span>
               )}
             </div>
-            <h4 style={{ fontSize: '0.82rem', opacity: 0.5, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <h4
+              style={{
+                fontSize: '0.82rem',
+                opacity: 0.5,
+                marginBottom: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}
+            >
               Generated Certificates
             </h4>
             <div>
-              {result.certificates.map(cert => (
+              {result.certificates.map((cert) => (
                 <CertRow key={cert.certificate_id} cert={cert} />
               ))}
             </div>

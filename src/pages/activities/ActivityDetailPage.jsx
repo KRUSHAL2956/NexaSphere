@@ -9,31 +9,42 @@ function Counter({ value, suffix = '' }) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !started.current) {
-        started.current = true;
-        const num = parseInt(value) || 0;
-        const dur = 1200;
-        const step = 16;
-        const inc = num / (dur / step);
-        let cur = 0;
-        const timer = setInterval(() => {
-          cur += inc;
-          if (cur >= num) { setCount(num); clearInterval(timer); }
-          else setCount(Math.floor(cur));
-        }, step);
-      }
-    }, { threshold: 0.5 });
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const num = parseInt(value) || 0;
+          const dur = 1200;
+          const step = 16;
+          const inc = num / (dur / step);
+          let cur = 0;
+          const timer = setInterval(() => {
+            cur += inc;
+            if (cur >= num) {
+              setCount(num);
+              clearInterval(timer);
+            } else setCount(Math.floor(cur));
+          }, step);
+        }
+      },
+      { threshold: 0.5 }
+    );
     obs.observe(el);
     return () => obs.disconnect();
   }, [value]);
 
-  return <span ref={ref}>{count}{suffix}</span>;
+  return (
+    <span ref={ref}>
+      {count}
+      {suffix}
+    </span>
+  );
 }
 
 function GlitchText({ text, color }) {
   return (
-    <span style={{ position: 'relative', display: 'inline-block' }}
+    <span
+      style={{ position: 'relative', display: 'inline-block' }}
       className="glitch-text"
       data-text={text}
     >
@@ -70,19 +81,30 @@ function GlitchText({ text, color }) {
 
 function FloatingOrbs({ color }) {
   return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    >
       {[...Array(6)].map((_, i) => (
-        <div key={i} style={{
-          position: 'absolute',
-          width: `${80 + i * 40}px`,
-          height: `${80 + i * 40}px`,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${color}22 0%, transparent 70%)`,
-          top: `${10 + (i * 17) % 80}%`,
-          left: `${5 + (i * 23) % 90}%`,
-          animation: `float ${6 + i * 2}s ease-in-out infinite`,
-          animationDelay: `${-i * 1.5}s`,
-        }} />
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            width: `${80 + i * 40}px`,
+            height: `${80 + i * 40}px`,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${color}22 0%, transparent 70%)`,
+            top: `${10 + ((i * 17) % 80)}%`,
+            left: `${5 + ((i * 23) % 90)}%`,
+            animation: `float ${6 + i * 2}s ease-in-out infinite`,
+            animationDelay: `${-i * 1.5}s`,
+          }}
+        />
       ))}
     </div>
   );
@@ -97,12 +119,19 @@ function ScanLine({ color }) {
           100% { top: 100%; }
         }
       `}</style>
-      <div style={{
-        position: 'absolute', left: 0, right: 0, height: '2px',
-        background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
-        opacity: 0.3, pointerEvents: 'none', zIndex: 0,
-        animation: 'scanline 4s linear infinite',
-      }} />
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          height: '2px',
+          background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+          opacity: 0.3,
+          pointerEvents: 'none',
+          zIndex: 0,
+          animation: 'scanline 4s linear infinite',
+        }}
+      />
     </>
   );
 }
@@ -125,58 +154,121 @@ function EventCard({ event, activityColor, onSelect, onDelete }) {
         cursor: 'pointer',
         transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
         transform: hovered ? 'translateY(-8px) scale(1.01)' : 'none',
-        boxShadow: hovered ? `0 20px 60px ${activityColor}30, 0 0 0 1px ${activityColor}40` : 'none',
+        boxShadow: hovered
+          ? `0 20px 60px ${activityColor}30, 0 0 0 1px ${activityColor}40`
+          : 'none',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      
       {hovered && (
-        <div style={{
-          position: 'absolute', top: 0, left: '-100%', width: '60%', height: '100%',
-          background: `linear-gradient(105deg, transparent 20%, ${activityColor}15 50%, transparent 80%)`,
-          animation: 'shimmer 0.6s ease forwards',
-          pointerEvents: 'none',
-        }} />
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: '-100%',
+            width: '60%',
+            height: '100%',
+            background: `linear-gradient(105deg, transparent 20%, ${activityColor}15 50%, transparent 80%)`,
+            animation: 'shimmer 0.6s ease forwards',
+            pointerEvents: 'none',
+          }}
+        />
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: '12px',
+        }}
+      >
         <div style={{ flex: 1 }}>
           <button
             className="btn btn-outline btn-sm"
-            onClick={(e) => { e.stopPropagation(); onDelete && onDelete(event.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete && onDelete(event.id);
+            }}
             style={{ marginBottom: '8px' }}
           >
             Delete this event
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <h3 style={{
-              fontFamily: 'Orbitron, monospace', fontSize: '0.95rem', fontWeight: 700,
-              color: activityColor, margin: 0,
-            }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '8px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <h3
+              style={{
+                fontFamily: 'Orbitron, monospace',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: activityColor,
+                margin: 0,
+              }}
+            >
               {event.name}
             </h3>
             {event.status === 'completed' && (
-              <span style={{
-                fontSize: '0.7rem', padding: '2px 10px', borderRadius: '20px',
-                background: 'rgba(34,197,94,0.12)', color: '#22c55e',
-                border: '1px solid rgba(34,197,94,0.3)', fontWeight: 700,
-                textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0,
-              }}><DynamicIcon name="CheckCircle" size={14} /> Completed</span>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  padding: '2px 10px',
+                  borderRadius: '20px',
+                  background: 'rgba(34,197,94,0.12)',
+                  color: '#22c55e',
+                  border: '1px solid rgba(34,197,94,0.3)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  flexShrink: 0,
+                }}
+              >
+                <DynamicIcon name="CheckCircle" size={14} /> Completed
+              </span>
             )}
           </div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '10px' }}><DynamicIcon name="Calendar" size={14} /> {event.date}</div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0 0 12px', lineHeight: 1.6 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '10px' }}>
+            <DynamicIcon name="Calendar" size={14} /> {event.date}
+          </div>
+          <p
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: '0.88rem',
+              margin: '0 0 12px',
+              lineHeight: 1.6,
+            }}
+          >
             {event.tagline || event.description}
           </p>
           {event.stats && (
             <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              {event.stats.map(s => (
+              {event.stats.map((s) => (
                 <div key={s.label}>
-                  <div style={{ fontFamily: 'Orbitron, monospace', fontSize: '1rem', fontWeight: 700, color: activityColor }}>
+                  <div
+                    style={{
+                      fontFamily: 'Orbitron, monospace',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: activityColor,
+                    }}
+                  >
                     {s.value}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div
+                    style={{
+                      fontSize: '0.68rem',
+                      color: 'var(--text-muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
                     {s.label}
                   </div>
                 </div>
@@ -185,17 +277,26 @@ function EventCard({ event, activityColor, onSelect, onDelete }) {
           )}
           <button
             className="btn btn-outline btn-sm"
-            onClick={(e) => { e.stopPropagation(); onDelete && onDelete(event.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete && onDelete(event.id);
+            }}
             style={{ marginTop: '12px' }}
           >
             Delete this event
           </button>
         </div>
-        <div style={{
-          color: activityColor, fontSize: '1.4rem', flexShrink: 0,
-          transform: hovered ? 'translateX(4px)' : '',
-          transition: 'transform 0.3s ease',
-        }}>→</div>
+        <div
+          style={{
+            color: activityColor,
+            fontSize: '1.4rem',
+            flexShrink: 0,
+            transform: hovered ? 'translateX(4px)' : '',
+            transition: 'transform 0.3s ease',
+          }}
+        >
+          →
+        </div>
       </div>
     </div>
   );
@@ -203,39 +304,68 @@ function EventCard({ event, activityColor, onSelect, onDelete }) {
 
 function UpcomingCard({ event, color }) {
   return (
-    <div style={{
-      background: 'var(--bg-card)',
-      border: '1px dashed var(--border-subtle)',
-      borderRadius: 'var(--radius-md)',
-      padding: '20px 24px',
-      opacity: 0.75,
-    }}>
+    <div
+      style={{
+        background: 'var(--bg-card)',
+        border: '1px dashed var(--border-subtle)',
+        borderRadius: 'var(--radius-md)',
+        padding: '20px 24px',
+        opacity: 0.75,
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-        <div style={{
-          width: '10px', height: '10px', borderRadius: '50%',
-          border: `2px solid ${color}`,
-          animation: 'pulseRing 1.8s infinite',
-          flexShrink: 0,
-        }} />
-        <h4 style={{ fontFamily: 'Orbitron, monospace', fontSize: '0.85rem', color, margin: 0, fontWeight: 700 }}>
+        <div
+          style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            border: `2px solid ${color}`,
+            animation: 'pulseRing 1.8s infinite',
+            flexShrink: 0,
+          }}
+        />
+        <h4
+          style={{
+            fontFamily: 'Orbitron, monospace',
+            fontSize: '0.85rem',
+            color,
+            margin: 0,
+            fontWeight: 700,
+          }}
+        >
           {event.name}
         </h4>
-        <span style={{
-          fontSize: '0.68rem', padding: '2px 8px', borderRadius: '20px',
-          background: `${color}15`, color, border: `1px solid ${color}40`,
-          fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0,
-        }}><DynamicIcon name="Flame" size={14} /> Upcoming</span>
+        <span
+          style={{
+            fontSize: '0.68rem',
+            padding: '2px 8px',
+            borderRadius: '20px',
+            background: `${color}15`,
+            color,
+            border: `1px solid ${color}40`,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            flexShrink: 0,
+          }}
+        >
+          <DynamicIcon name="Flame" size={14} /> Upcoming
+        </span>
       </div>
-      <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginBottom: '6px' }}><DynamicIcon name="Calendar" size={14} /> {event.date}</div>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>{event.description}</p>
+      <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginBottom: '6px' }}>
+        <DynamicIcon name="Calendar" size={14} /> {event.date}
+      </div>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
+        {event.description}
+      </p>
     </div>
   );
 }
 
 function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
   return `${r},${g},${b}`;
 }
 
@@ -247,10 +377,11 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
   const activityKey = encodeURIComponent(activity.title);
 
   const fetchManualEvents = async () => {
-    const url = apiBase ? `${apiBase}/api/content/activity-events/${activityKey}` : `/api/content/activity-events/${activityKey}`;
-    const res = await fetch(url);
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && Array.isArray(data?.events)) setManualEvents(data.events);
+    const url = apiBase
+      ? `${apiBase}/api/content/activity-events/${activityKey}`
+      : `/api/content/activity-events/${activityKey}`;
+    const data = await apiClient(url).catch(() => ({}));
+    if (Array.isArray(data?.events)) setManualEvents(data.events);
   };
 
   useEffect(() => {
@@ -283,14 +414,14 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
     if (!eventDescription) return;
     setBusy(true);
     try {
-      const url = apiBase ? `${apiBase}/api/content/activity-events/${activityKey}` : `/api/content/activity-events/${activityKey}`;
-      const res = await fetch(url, {
+      const url = apiBase
+        ? `${apiBase}/api/content/activity-events/${activityKey}`
+        : `/api/content/activity-events/${activityKey}`;
+      const data = await apiClient(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...auth, eventName, eventDate, eventTagline, eventDescription }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Failed to add event');
       alert('Event added successfully.');
       await fetchManualEvents();
     } catch (e) {
@@ -306,7 +437,9 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
     if (!window.confirm('Delete this event?')) return;
     setBusy(true);
     try {
-      const url = apiBase ? `${apiBase}/api/content/activity-events/${activityKey}/${eventId}` : `/api/content/activity-events/${activityKey}/${eventId}`;
+      const url = apiBase
+        ? `${apiBase}/api/content/activity-events/${activityKey}/${eventId}`
+        : `/api/content/activity-events/${activityKey}/${eventId}`;
       const res = await fetch(url, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -328,98 +461,135 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '100px', overflow: 'hidden' }}>
-
-      
-      <div style={{
-        position: 'relative',
-        background: `linear-gradient(180deg, rgba(${rgb},0.15) 0%, rgba(${rgb},0.06) 60%, transparent 100%)`,
-        borderBottom: `1px solid rgba(${rgb},0.3)`,
-        padding: '60px 0 52px',
-        overflow: 'hidden',
-      }}>
+      <div
+        style={{
+          position: 'relative',
+          background: `linear-gradient(180deg, rgba(${rgb},0.15) 0%, rgba(${rgb},0.06) 60%, transparent 100%)`,
+          borderBottom: `1px solid rgba(${rgb},0.3)`,
+          padding: '60px 0 52px',
+          overflow: 'hidden',
+        }}
+      >
         <FloatingOrbs color={color} />
         <ScanLine color={color} />
 
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          
           <button
             onClick={onBack}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: '8px',
-              background: 'none', border: `1px solid rgba(${rgb},0.3)`,
-              color: color, borderRadius: '20px', padding: '6px 18px',
-              fontSize: '0.85rem', cursor: 'pointer', marginBottom: '36px',
-              transition: 'all 0.2s', fontFamily: 'Rajdhani, sans-serif', fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'none',
+              border: `1px solid rgba(${rgb},0.3)`,
+              color: color,
+              borderRadius: '20px',
+              padding: '6px 18px',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              marginBottom: '36px',
+              transition: 'all 0.2s',
+              fontFamily: 'Rajdhani, sans-serif',
+              fontWeight: 600,
             }}
-            onMouseEnter={e => { e.target.style.background = `rgba(${rgb},0.1)`; e.target.style.transform = 'translateX(-4px)'; }}
-            onMouseLeave={e => { e.target.style.background = 'none'; e.target.style.transform = ''; }}
+            onMouseEnter={(e) => {
+              e.target.style.background = `rgba(${rgb},0.1)`;
+              e.target.style.transform = 'translateX(-4px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'none';
+              e.target.style.transform = '';
+            }}
           >
             ← Back to Activities
           </button>
 
-          
-          <div style={{
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateY(0)' : 'translateY(30px)',
-            transition: 'all 0.7s cubic-bezier(0.22,1,0.36,1)',
-          }}>
-            <div style={{
-              fontSize: '5rem', marginBottom: '16px',
-              filter: `drop-shadow(0 0 24px rgba(${rgb},0.6))`,
-              animation: 'float 4s ease-in-out infinite',
-              display: 'inline-block',
-            }}>
+          <div
+            style={{
+              opacity: mounted ? 1 : 0,
+              transform: mounted ? 'translateY(0)' : 'translateY(30px)',
+              transition: 'all 0.7s cubic-bezier(0.22,1,0.36,1)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '5rem',
+                marginBottom: '16px',
+                filter: `drop-shadow(0 0 24px rgba(${rgb},0.6))`,
+                animation: 'float 4s ease-in-out infinite',
+                display: 'inline-block',
+              }}
+            >
               <DynamicIcon name={activity.icon} size={80} />
             </div>
-            <h1 style={{
-              fontFamily: 'Orbitron, monospace',
-              fontSize: 'clamp(2rem, 6vw, 3.5rem)',
-              fontWeight: 900, marginBottom: '8px',
-              lineHeight: 1.1,
-            }}>
+            <h1
+              style={{
+                fontFamily: 'Orbitron, monospace',
+                fontSize: 'clamp(2rem, 6vw, 3.5rem)',
+                fontWeight: 900,
+                marginBottom: '8px',
+                lineHeight: 1.1,
+              }}
+            >
               <GlitchText text={activity.title} color={color} />
             </h1>
-            <div style={{
-              fontFamily: 'Rajdhani, sans-serif',
-              fontSize: 'clamp(1rem, 2.5vw, 1.3rem)',
-              color: `rgba(${rgb},0.8)`,
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              fontWeight: 600,
-              marginBottom: '20px',
-              opacity: mounted ? 1 : 0,
-              transition: 'opacity 0.7s 0.2s ease',
-            }}>
+            <div
+              style={{
+                fontFamily: 'Rajdhani, sans-serif',
+                fontSize: 'clamp(1rem, 2.5vw, 1.3rem)',
+                color: `rgba(${rgb},0.8)`,
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                marginBottom: '20px',
+                opacity: mounted ? 1 : 0,
+                transition: 'opacity 0.7s 0.2s ease',
+              }}
+            >
               {activity.tagline}
             </div>
-            <p style={{
-              color: 'var(--text-secondary)', maxWidth: '560px',
-              fontSize: '1.05rem', lineHeight: 1.7,
-              opacity: mounted ? 1 : 0,
-              transition: 'opacity 0.7s 0.35s ease',
-            }}>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                maxWidth: '560px',
+                fontSize: '1.05rem',
+                lineHeight: 1.7,
+                opacity: mounted ? 1 : 0,
+                transition: 'opacity 0.7s 0.35s ease',
+              }}
+            >
               {activity.description}
             </p>
           </div>
         </div>
       </div>
 
-      
       <div className="container" style={{ paddingTop: '56px' }}>
-
-        
-        {((activity.conductedEvents && activity.conductedEvents.length > 0) || manualEvents.length > 0) && (
+        {((activity.conductedEvents && activity.conductedEvents.length > 0) ||
+          manualEvents.length > 0) && (
           <div style={{ marginBottom: '56px' }}>
-            <h2 style={{
-              fontFamily: 'Orbitron, monospace', fontSize: '1.1rem', fontWeight: 700,
-              color, marginBottom: '24px', letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              display: 'flex', alignItems: 'center', gap: '10px',
-            }}>
-              <span style={{
-                display: 'inline-block', width: '32px', height: '2px',
-                background: `linear-gradient(90deg, ${color}, transparent)`,
-              }} />
+            <h2
+              style={{
+                fontFamily: 'Orbitron, monospace',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                color,
+                marginBottom: '24px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '32px',
+                  height: '2px',
+                  background: `linear-gradient(90deg, ${color}, transparent)`,
+                }}
+              />
               Conducted Events
             </h2>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
@@ -427,8 +597,10 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
                 {busy ? 'Please wait...' : '+ Add Event'}
               </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '760px' }}>
-              {[...manualEvents, ...(activity.conductedEvents || [])].map(event => (
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '760px' }}
+            >
+              {[...manualEvents, ...(activity.conductedEvents || [])].map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -441,19 +613,30 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
           </div>
         )}
 
-        
         {activity.upcomingEvents && activity.upcomingEvents.length > 0 && (
           <div style={{ maxWidth: '760px' }}>
-            <h2 style={{
-              fontFamily: 'Orbitron, monospace', fontSize: '1.1rem', fontWeight: 700,
-              color, marginBottom: '24px', letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              display: 'flex', alignItems: 'center', gap: '10px',
-            }}>
-              <span style={{
-                display: 'inline-block', width: '32px', height: '2px',
-                background: `linear-gradient(90deg, ${color}, transparent)`,
-              }} />
+            <h2
+              style={{
+                fontFamily: 'Orbitron, monospace',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                color,
+                marginBottom: '24px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '32px',
+                  height: '2px',
+                  background: `linear-gradient(90deg, ${color}, transparent)`,
+                }}
+              />
               Coming Up
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -464,17 +647,15 @@ export default function ActivityDetailPage({ activity, onBack, onSelectEvent }) 
           </div>
         )}
 
-        
         {(!activity.conductedEvents || activity.conductedEvents.length === 0) &&
-         (!manualEvents || manualEvents.length === 0) &&
-         (!activity.upcomingEvents || activity.upcomingEvents.length === 0) && (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '80px 0' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '16px' }}>{activity.icon}</div>
-            <p>Events coming soon. Watch this space!</p>
-          </div>
-        )}
+          (!manualEvents || manualEvents.length === 0) &&
+          (!activity.upcomingEvents || activity.upcomingEvents.length === 0) && (
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '80px 0' }}>
+              <div style={{ fontSize: '4rem', marginBottom: '16px' }}>{activity.icon}</div>
+              <p>Events coming soon. Watch this space!</p>
+            </div>
+          )}
       </div>
     </div>
   );
 }
-

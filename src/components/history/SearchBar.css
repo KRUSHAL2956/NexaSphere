@@ -24,7 +24,7 @@
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .search-input:focus {
@@ -58,7 +58,7 @@
   right: 10px;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.72);
   cursor: pointer;
   font-size: 16px;
   padding: 0 4px;
@@ -117,7 +117,7 @@
 
 .result-response {
   margin: 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.74);
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
@@ -135,7 +135,7 @@
 .search-empty {
   padding: 16px 12px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 13px;
 }
 

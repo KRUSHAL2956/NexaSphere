@@ -8,7 +8,7 @@ import { captureHandledException } from './errorTracking';
 import { getSocketPath, getSocketServerUrl } from './runtimeConfig';
 
 let socket = null;
-let eventHandlers = {};
+const eventHandlers = {};
 let currentSocketUrl = '';
 let warnedMissingSocketConfig = false;
 
@@ -37,7 +37,6 @@ export function initializeSocket(serverUrl = getSocketServerUrl()) {
   socket = io(resolvedUrl, {
     path: getSocketPath(),
     reconnection: true,
-    reconnectionAttempts: 10,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     reconnectionAttempts: 8,
@@ -50,10 +49,6 @@ export function initializeSocket(serverUrl = getSocketServerUrl()) {
     identifyUser(); // try to identify if user info is available locally
   });
 
-  socket.on('reconnect_failed', () => {
-    console.error('[Socket.IO] Reconnection failed');
-  });
-
   socket.on('connect_error', (error) => {
     console.error('[Socket.IO] Connection Error:', error);
     captureHandledException(error, 'Socket.IO connect_error:');
@@ -64,14 +59,13 @@ export function initializeSocket(serverUrl = getSocketServerUrl()) {
     captureHandledException(error, 'Socket.IO error:');
   });
 
-  socket.on('connect_error', (error) => {
-    captureHandledException(error, 'Socket.IO connection error:');
-  });
-
   socket.on('reconnect_failed', () => {
-    captureHandledException(new Error('Socket.IO reconnect attempts exhausted'), 'Socket.IO reconnect failed:');
+    console.error('[Socket.IO] Reconnection failed after max attempts');
+    captureHandledException(
+      new Error('Socket.IO reconnect attempts exhausted'),
+      'Socket.IO reconnect failed:'
+    );
   });
-
   // Setup custom event listeners
   setupEventListeners();
 

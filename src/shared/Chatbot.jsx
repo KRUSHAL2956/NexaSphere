@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import apiClient from '../utils/apiClient.js';
 import '../styles/chatbot.css';
 import PromptHistorySidebar from '../components/history/PromptHistorySidebar';
 import SearchBar from '../components/history/SearchBar';
@@ -12,7 +13,10 @@ const Chatbot = () => {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'bot', text: 'Nexa-Intelligence Online. How can I assist your journey?' }
+    {
+      role: 'bot',
+      text: 'Nexa-Intelligence Online. How can I assist your journey?',
+    },
   ]);
   const [showSidebar, setShowSidebar] = useState(false);
   const [currentWorkspace, setCurrentWorkspace] = useState('default');
@@ -53,7 +57,7 @@ const Chatbot = () => {
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
     const userMsg = { role: 'user', text: input };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     const currentInput = input;
     setInput('');
     setIsSending(true);
@@ -61,39 +65,33 @@ const Chatbot = () => {
     const aiChatUrl = buildUrl(getAiApiBase(), '/ai/chat');
 
     if (!aiChatUrl) {
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
-        { role: 'bot', text: 'Nexa-AI is offline right now. The AI service URL is not configured for this deployment.' }
+        {
+          role: 'bot',
+          text: 'Nexa-AI is offline right now. The AI service URL is not configured for this deployment.',
+        },
       ]);
       setIsSending(false);
       return;
     }
 
     try {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 12000);
-      const response = await fetch(aiChatUrl, {
+      const data = await apiClient('http://localhost:8000/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: currentInput }),
         signal: controller.signal,
       });
-      window.clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`AI chat request failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      setMessages(prev => [
-        ...prev,
-        { role: 'bot', text: data.reply || 'Nexa-AI received the request, but the reply came back empty. Please try again.' }
-      ]);
+      setMessages((prev) => [...prev, { role: 'bot', text: data.reply }]);
     } catch (e) {
       console.error('AI chat request failed', e);
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
-        { role: 'bot', text: 'Nexa-AI: Core link unavailable right now. Please try again in a moment.' }
+        {
+          role: 'bot',
+          text: 'Nexa-AI: Core link unavailable right now. Please try again in a moment.',
+        },
       ]);
     } finally {
       setIsSending(false);
@@ -102,7 +100,10 @@ const Chatbot = () => {
 
   const handleSelectPrompt = (prompt) => {
     setMessages([
-      { role: 'bot', text: 'Nexa-Intelligence Online. How can I assist your journey?' },
+      {
+        role: 'bot',
+        text: 'Nexa-Intelligence Online. How can I assist your journey?',
+      },
       { role: 'user', text: prompt.userPrompt },
       { role: 'bot', text: prompt.botResponse },
     ]);
@@ -112,12 +113,17 @@ const Chatbot = () => {
   return (
     <div className="ns-chatbot-wrapper">
       {!isOpen ? (
-        <button className="chat-trigger-btn" onClick={() => setIsOpen(true)}>
+        <button
+          className="chat-trigger-btn"
+          onClick={() => setIsOpen(true)}
+          aria-expanded={isOpen}
+          aria-controls="chatbot-window"
+        >
           <div className="pulse-ring"></div>
           💬
         </button>
       ) : (
-        <div className="chat-window-glass">
+        <div id="chatbot-window" className="chat-window-glass">
           <PromptHistorySidebar
             isOpen={showSidebar}
             onSelectPrompt={handleSelectPrompt}
@@ -130,26 +136,31 @@ const Chatbot = () => {
                 className="history-toggle-btn"
                 onClick={() => setShowSidebar(!showSidebar)}
                 title="Toggle History"
+                aria-expanded={showSidebar}
+                aria-controls="prompt-history-sidebar"
               >
                 📋
+              </button>
+              <button
+                className="export-btn"
+                onClick={() => exportPrompts(currentWorkspace)}
+                title="Export chat history"
+              >
+                ⬇
               </button>
               <div className="header-status">
                 <span className="status-dot"></span>
                 <span>NEXA-AI</span>
               </div>
-              <button className="close-btn" onClick={() => setIsOpen(false)}>×</button>
+              <button className="close-btn" onClick={() => setIsOpen(false)}>
+                ×
+              </button>
             </div>
 
             <div className="chat-content">
-              <PinnedChats
-                onSelectPrompt={handleSelectPrompt}
-                workspace={currentWorkspace}
-              />
+              <PinnedChats onSelectPrompt={handleSelectPrompt} workspace={currentWorkspace} />
 
-              <SearchBar
-                onSelectPrompt={handleSelectPrompt}
-                workspace={currentWorkspace}
-              />
+              <SearchBar onSelectPrompt={handleSelectPrompt} workspace={currentWorkspace} />
 
               <div className="chat-messages" ref={scrollRef}>
                 {messages.map((m, i) => (

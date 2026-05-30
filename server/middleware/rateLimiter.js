@@ -1,5 +1,5 @@
-import rateLimit from "express-rate-limit";
-import logger from "../utils/logger.js";
+import rateLimit from 'express-rate-limit';
+import logger from '../utils/logger.js';
 
 // ---------------------------------------------------------------------------
 // Shared env-var config for the general API limiter
@@ -34,7 +34,7 @@ export const apiRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res, _next, options) => {
-    logger.warn("Global API rate limit exceeded", {
+    logger.warn('Global API rate limit exceeded', {
       ip: req.ip,
       path: req.originalUrl || req.path,
       method: req.method,
@@ -42,7 +42,7 @@ export const apiRateLimiter = rateLimit({
       windowMs: options.windowMs,
     });
     res.status(options.statusCode).json({
-      error: "Too many requests from this IP, please try again later.",
+      error: 'Too many requests from this IP, please try again later.',
     });
   },
 });
@@ -56,7 +56,7 @@ export const formRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res, _next, options) => {
-    logger.warn("Rate limit exceeded for public form API", {
+    logger.warn('Rate limit exceeded for public form API', {
       ip: req.ip,
       path: req.originalUrl || req.path,
       method: req.method,
@@ -64,7 +64,7 @@ export const formRateLimiter = rateLimit({
       windowMs: options.windowMs,
     });
     res.status(options.statusCode).json({
-      error: "Too many form submissions from this IP, please try again later.",
+      error: 'Too many form submissions from this IP, please try again later.',
     });
   },
 });
@@ -76,7 +76,7 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: "Too many login attempts, please try again after a minute.",
+    error: 'Too many login attempts, please try again after a minute.',
   },
 });
 
@@ -87,7 +87,29 @@ export const notificationRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: "Too many notification requests, please try again later.",
+    error: 'Too many notification requests, please try again later.',
+  },
+});
+
+// Activity-event auth rate limiter: 10 requests per IP per 15 minutes.
+// Applied to the publicly reachable POST/DELETE activity-event endpoints that
+// require a shared password. Backs up the in-process lockout so that even
+// when the server restarts the IP-level window survives in the rate-limit
+// store.
+export const activityAuthRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    logger.warn('Activity-event auth rate limit exceeded', {
+      ip: req.ip,
+      path: req.originalUrl || req.path,
+      method: req.method,
+    });
+    res.status(options.statusCode).json({
+      error: 'Too many attempts from this IP, please try again later.',
+    });
   },
 });
 
@@ -98,8 +120,7 @@ export const portfolioRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error:
-      "Too many portfolio update attempts from this IP, please try again after 15 minutes.",
+    error: 'Too many portfolio update attempts from this IP, please try again after 15 minutes.',
   },
 });
 
@@ -114,11 +135,12 @@ export function validateLimiters() {
     formRateLimiter,
     authRateLimiter,
     notificationRateLimiter,
+    activityAuthRateLimiter,
     portfolioRateLimiter,
   };
 
   for (const [name, limiter] of Object.entries(limiters)) {
-    if (typeof limiter !== "function") {
+    if (typeof limiter !== 'function') {
       throw new Error(
         `Rate limiter misconfiguration: "${name}" is not a function. Check rateLimiter.js exports.`
       );

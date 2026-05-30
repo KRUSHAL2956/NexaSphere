@@ -1,11 +1,16 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AdminIcon } from './AdminIcon';
+import { adminPath } from '../utils/adminBasePath';
 
 const links = [
   { to: '/dashboard', label: 'Dashboard', icon: 'Dashboard' },
   { to: '/dashboard/events', label: 'Events', icon: 'Calendar' },
-  { to: '/dashboard/activity-events', label: 'Activity Events', icon: 'Target' },
+  {
+    to: '/dashboard/activity-events',
+    label: 'Activity Events',
+    icon: 'Target',
+  },
   { to: '/dashboard/core-team', label: 'Core Team', icon: 'Users' },
   { to: '/dashboard/membership', label: 'Membership', icon: 'FileText' },
   { to: '/dashboard/certificates', label: 'Certificates', icon: 'Award' },
@@ -24,7 +29,7 @@ export function Sidebar() {
         {links.map(({ to, label, icon }) => (
           <NavLink
             key={to}
-            to={to}
+            to={adminPath(to)}
             end={to === '/dashboard'}
             className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
           >
@@ -35,7 +40,9 @@ export function Sidebar() {
       </nav>
       <div className="sidebar-footer">
         <span className="sidebar-email">{email}</span>
-        <button className="btn-logout" onClick={logout}>Logout</button>
+        <button className="btn-logout" onClick={logout}>
+          Logout
+        </button>
       </div>
     </aside>
   );

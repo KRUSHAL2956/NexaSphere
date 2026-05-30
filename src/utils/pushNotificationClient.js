@@ -1,3 +1,4 @@
+import apiClient from './apiClient.js';
 /**
  * Frontend Push Notification Service
  * Handles service worker registration and push notification setup
@@ -82,7 +83,7 @@ export async function subscribeToPushNotifications(registration, vapidPublicKey)
     });
 
     // Send subscription to server
-    await fetch('/api/notifications/subscribe', {
+    await apiClient('/api/notifications/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ export async function unsubscribeFromPushNotifications(registration) {
       await subscription.unsubscribe();
 
       // Notify server
-      await fetch('/api/notifications/unsubscribe', {
+      await apiClient('/api/notifications/unsubscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -31,9 +31,12 @@ export const initializeDB = async () => {
 
     request.onupgradeneeded = (event) => {
       const database = event.target.result;
-      
+
       if (!database.objectStoreNames.contains(STORE_NAME)) {
-        const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        const store = database.createObjectStore(STORE_NAME, {
+          keyPath: 'id',
+          autoIncrement: true,
+        });
         store.createIndex('timestamp', 'timestamp', { unique: false });
         store.createIndex('workspace', 'workspace', { unique: false });
         store.createIndex('pinned', 'pinned', { unique: false });
@@ -48,7 +51,7 @@ export const initializeDB = async () => {
 export const savePrompt = async (prompt, response, workspace = 'default') => {
   try {
     const database = await initializeDB();
-    
+
     const promptEntry = {
       userPrompt: prompt,
       botResponse: response,
@@ -83,7 +86,7 @@ export const getAllPrompts = async (workspace = null) => {
     return new Promise((resolve, reject) => {
       const transaction = database.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
-      
+
       let request;
       if (workspace) {
         const index = store.index('workspace');
@@ -273,8 +276,10 @@ export const exportPrompts = async (workspace = null) => {
   const link = document.createElement('a');
   link.href = url;
   link.download = `nexasphere-prompts-${Date.now()}.json`;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 };
 
 export const importPrompts = async (file) => {

@@ -35,9 +35,13 @@ import { eventsService } from './services/eventsService.js';
 import { coreTeamService } from './services/coreTeamService.js';
 import notificationsService from './services/notificationsService.js';
 import { portfolioRepository } from './repositories/portfolioRepository.js';
+import { initCacheListener } from './services/cacheService.js';
 
 // Fail fast on startup if any rate limiter failed to export correctly.
 validateLimiters();
+
+// Start distributed cache and notification synchronization listener
+initCacheListener();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,10 +51,16 @@ const app = express();
 const adminEvents = new EventEmitter();
 
 app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((value) => value.trim()).filter(Boolean) : true,
-  credentials: false,
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',')
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : true,
+    credentials: false,
+  })
+);
 app.use(express.json({ limit: '512kb' }));
 
 function requestLogger(req, res, next) {
@@ -77,8 +87,12 @@ function requestLogger(req, res, next) {
 app.use(requestLogger);
 
 const adminAuth = adminAuthMiddleware.requireAdmin;
-adminEvents.on('CORE_TEAM_MEMBER_ADDED', (event) => console.log(`[EVENT] CORE_TEAM_MEMBER_ADDED:`, event));
-adminEvents.on('CORE_TEAM_MEMBER_REMOVED', (event) => console.log(`[EVENT] CORE_TEAM_MEMBER_REMOVED:`, event));
+adminEvents.on('CORE_TEAM_MEMBER_ADDED', (event) =>
+  console.log(`[EVENT] CORE_TEAM_MEMBER_ADDED:`, event)
+);
+adminEvents.on('CORE_TEAM_MEMBER_REMOVED', (event) =>
+  console.log(`[EVENT] CORE_TEAM_MEMBER_REMOVED:`, event)
+);
 
 const defaultContent = {
   events: [
@@ -87,7 +101,7 @@ const defaultContent = {
       name: 'KSS #153 — Knowledge Sharing Session',
       shortName: 'KSS #153',
       date: 'March 14, 2025',
-      description: 'NexaSphere\'s inaugural Knowledge Sharing Session focused on the impact of AI.',
+      description: "NexaSphere's inaugural Knowledge Sharing Session focused on the impact of AI.",
       status: 'completed',
       icon: 'Brain',
       tags: ['AI', 'Learning', 'Community'],
@@ -100,7 +114,8 @@ const defaultContent = {
 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
+const SUPABASE_SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
 export const HAS_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_SERVICE_KEY);
 
 function requiredEnv(name) {
@@ -121,7 +136,7 @@ function requiredStrongPassword(name) {
 
   if (value.length < 12 || !hasLower || !hasUpper || !hasNumber || !hasSymbol) {
     throw new Error(
-      `${name} must be at least 12 characters and include uppercase, lowercase, number, and symbol`,
+      `${name} must be at least 12 characters and include uppercase, lowercase, number, and symbol`
     );
   }
 
@@ -169,7 +184,10 @@ app.get('/healthz', async (req, res) => {
 app.get('/api/content/events', eventsController.listEvents);
 app.get('/api/content/activity-events/:activityKey', activityEventsController.listActivityEvents);
 app.post('/api/content/activity-events/:activityKey', activityEventsController.addActivityEvent);
-app.delete('/api/content/activity-events/:activityKey/:eventId', activityEventsController.deleteActivityEvent);
+app.delete(
+  '/api/content/activity-events/:activityKey/:eventId',
+  activityEventsController.deleteActivityEvent
+);
 
 // Admin Auth Endpoints
 app.post('/api/admin/login', authRateLimiter, adminAuthMiddleware.login);
@@ -187,7 +205,7 @@ app.delete('/api/admin/events/:id', adminAuth, eventsController.adminDeleteEvent
 app.get('/api/content/team', async (req, res) => {
   try {
     const rawMembers = await coreTeamService.listMembers();
-    const members = (rawMembers || []).map(m => {
+    const members = (rawMembers || []).map((m) => {
       let email = m.email || null;
       if (email && !email.toLowerCase().endsWith('@glbajajgroup.org')) {
         email = null; // hide personal emails entirely
@@ -195,7 +213,7 @@ app.get('/api/content/team', async (req, res) => {
       return {
         ...m,
         email,
-        whatsapp: 'https://chat.whatsapp.com/FhpJEaod2g419jFMfqrhGZ' // official community link
+        whatsapp: 'https://chat.whatsapp.com/FhpJEaod2g419jFMfqrhGZ', // official community link
       };
     });
     return res.json({ members });
@@ -207,7 +225,7 @@ app.get('/api/content/team', async (req, res) => {
 app.get('/api/content/core-team', async (req, res) => {
   try {
     const rawMembers = await coreTeamService.listMembers();
-    const members = (rawMembers || []).map(m => {
+    const members = (rawMembers || []).map((m) => {
       let email = m.email || null;
       if (email && !email.toLowerCase().endsWith('@glbajajgroup.org')) {
         email = null; // hide personal emails entirely
@@ -215,7 +233,7 @@ app.get('/api/content/core-team', async (req, res) => {
       return {
         ...m,
         email,
-        whatsapp: 'https://chat.whatsapp.com/FhpJEaod2g419jFMfqrhGZ' // official community link
+        whatsapp: 'https://chat.whatsapp.com/FhpJEaod2g419jFMfqrhGZ', // official community link
       };
     });
     return res.json({ members });
@@ -234,8 +252,16 @@ app.post('/api/forms/membership', formRateLimiter, formsController.makeHandleFor
 app.post('/api/forms/recruitment', formRateLimiter, formsController.makeHandleForm('recruitment'));
 app.post('/api/core-team/apply', formRateLimiter, formsController.makeHandleForm('core_team'));
 
-app.post('/api/submissions/membership', formRateLimiter, formsController.makeHandleForm('membership'));
-app.post('/api/submissions/recruitment', formRateLimiter, formsController.makeHandleForm('recruitment'));
+app.post(
+  '/api/submissions/membership',
+  formRateLimiter,
+  formsController.makeHandleForm('membership')
+);
+app.post(
+  '/api/submissions/recruitment',
+  formRateLimiter,
+  formsController.makeHandleForm('recruitment')
+);
 
 // Admin membership responses
 app.get('/api/admin/membership', adminAuth, async (req, res) => {
@@ -267,7 +293,7 @@ app.get('/api/admin/membership', adminAuth, async (req, res) => {
 
 // Real-time Push Subscriber channels
 const pushSubscriptions = new Set();
-app.post('/api/notifications/subscribe', (req, res) => {
+app.post('/api/notifications/subscribe', notificationRateLimiter, (req, res) => {
   try {
     const { subscription } = req.body;
     if (subscription) {
@@ -283,7 +309,7 @@ app.post('/api/notifications/subscribe', (req, res) => {
   }
 });
 
-app.post('/api/notifications/unsubscribe', (req, res) => {
+app.post('/api/notifications/unsubscribe', notificationRateLimiter, (req, res) => {
   try {
     const { subscription } = req.body;
     if (subscription) pushSubscriptions.delete(JSON.stringify(subscription));
@@ -294,9 +320,9 @@ app.post('/api/notifications/unsubscribe', (req, res) => {
 });
 
 // Server side notifications store api
-app.get('/api/notifications', (req, res) => {
+app.get('/api/notifications', adminAuth, notificationRateLimiter, (req, res) => {
   try {
-    const userId = req.query.userId || 'global';
+    const userId = req.adminSession?.username || 'global';
     const list = notificationsService.getNotifications(userId);
     return res.json({ notifications: list });
   } catch (err) {
@@ -306,9 +332,9 @@ app.get('/api/notifications', (req, res) => {
 
 app.post('/api/notifications/mark-read', adminAuth, notificationRateLimiter, (req, res) => {
   try {
-    const { id, userId } = req.body || {};
+    const { id } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id required' });
-    const uid = userId || 'global';
+    const uid = req.adminSession?.username || 'global';
     const ok = notificationsService.markAsRead(uid, id);
     return res.json({ success: ok });
   } catch (err) {
@@ -318,8 +344,8 @@ app.post('/api/notifications/mark-read', adminAuth, notificationRateLimiter, (re
 
 app.post('/api/notifications/mark-all-read', adminAuth, notificationRateLimiter, (req, res) => {
   try {
-    const { userId } = req.body || {};
-    notificationsService.markAllAsRead(userId || 'global');
+    const uid = req.adminSession?.username || 'global';
+    notificationsService.markAllAsRead(uid);
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -329,8 +355,8 @@ app.post('/api/notifications/mark-all-read', adminAuth, notificationRateLimiter,
 app.delete('/api/notifications/:id', adminAuth, notificationRateLimiter, (req, res) => {
   try {
     const id = req.params.id;
-    const userId = req.query.userId || 'global';
-    const removed = notificationsService.removeNotification(userId, id);
+    const uid = req.adminSession?.username || 'global';
+    const removed = notificationsService.removeNotification(uid, id);
     if (!removed) return res.status(404).json({ error: 'Notification not found' });
     return res.json({ success: true });
   } catch (err) {
@@ -340,8 +366,8 @@ app.delete('/api/notifications/:id', adminAuth, notificationRateLimiter, (req, r
 
 app.delete('/api/notifications', adminAuth, notificationRateLimiter, (req, res) => {
   try {
-    const userId = req.query.userId || 'global';
-    notificationsService.clearAll(userId);
+    const uid = req.adminSession?.username || 'global';
+    notificationsService.clearAll(uid);
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -350,11 +376,11 @@ app.delete('/api/notifications', adminAuth, notificationRateLimiter, (req, res) 
 
 app.post('/api/notifications', adminAuth, notificationRateLimiter, (req, res) => {
   try {
-    const { userId, title, message, type, link } = req.body || {};
+    const { title, message, type, link } = req.body || {};
     if (!title || !message) {
       return res.status(400).json({ error: 'title and message are required' });
     }
-    const note = notificationsService.addNotification(userId || 'global', {
+    const note = notificationsService.addNotification(req.adminSession?.username || 'global', {
       title,
       message,
       type,
@@ -433,6 +459,9 @@ app.put('/api/portfolio', portfolioRateLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Passkey must be at least 12 characters long' });
     }
 
+    const existingPortfolio = await portfolioRepository.getByUsername(username);
+    const isNewRegistration = !existingPortfolio;
+
     const lockout = checkPasskeyLockout(username, ip);
     if (lockout) {
       return res.status(429).json({
@@ -440,7 +469,9 @@ app.put('/api/portfolio', portfolioRateLimiter, async (req, res) => {
       });
     }
 
-    const isAuthorized = await portfolioRepository.verifyPasskey(username, passkey);
+    const isAuthorized = await portfolioRepository.verifyPasskey(username, passkey, {
+      allowNew: isNewRegistration,
+    });
     if (!isAuthorized) {
       recordFailedPasskeyAttempt(username, ip);
       return res.status(401).json({ error: 'Incorrect passkey for this username' });
@@ -459,16 +490,14 @@ app.put('/api/portfolio', portfolioRateLimiter, async (req, res) => {
 process.on('unhandledRejection', (reason) => {
   console.error(
     '[Process] Unhandled rejection:',
-    reason instanceof Error ? reason.message : reason,
+    reason instanceof Error ? reason.message : reason
   );
 });
 
 process.on('uncaughtException', (err) => {
-  console.error(
-    '[Process] Uncaught exception:',
-    err instanceof Error ? err.message : err,
-  );
+  console.error('[Process] Uncaught exception:', err instanceof Error ? err.message : err);
   if (err && err.stack) console.error(err.stack);
+  process.exit(1);
 });
 
 const port = Number(process.env.PORT || 8787);
